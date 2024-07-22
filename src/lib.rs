@@ -39,43 +39,6 @@ pub enum S3Error {
     EnvConfig(String),
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub enum SampleKey {
-    LoginWithUniqueCode,
-}
-
-impl Key for SampleKey {
-    type Error = serde_json::Error;
-
-    #[inline]
-    fn name<'src>(&self) -> &'src str {
-        match *self {
-            Self::LoginWithUniqueCode => "login-with-code",
-        }
-    }
-
-    #[inline]
-    fn serialize_value<T>(&self, value: &T) -> Result<Vec<u8>, Self::Error>
-    where
-        T: Serialize + Send,
-    {
-        serde_json::to_vec(value)
-    }
-
-    #[inline]
-    fn deserialize_value<T>(&self, content: &[u8]) -> Result<T, Self::Error>
-    where
-        T: for<'content> serde::Deserialize<'content>,
-    {
-        serde_json::from_slice(content)
-    }
-
-    #[inline]
-    fn mime(&self) -> String {
-        "application/json".to_owned()
-    }
-}
-
 pub trait Key {
     type Error;
 

@@ -26,11 +26,11 @@ impl S3 {
     }
 
     #[inline]
-    pub async fn put_object<T, K>(&self, key: &K, value: &T) -> Result<(), S3Error>
+    pub async fn put_object<VALUE, KEY>(&self, key: &KEY, value: &VALUE) -> Result<(), S3Error>
     where
-        T: Serialize + Send + Sync,
-        K: Key + Send + Sync,
-        <K as Key>::Error: ToString + Send + Sync,
+        VALUE: Serialize + Send + Sync,
+        KEY: Key + Send + Sync,
+        <KEY as Key>::Error: ToString + Send + Sync,
     {
         let serialize = key.serialize_value(value);
 
@@ -44,9 +44,9 @@ impl S3 {
         }
     }
 
-    async fn put_bytes<K>(&self, value: Vec<u8>, key: &K) -> Result<(), S3Error>
+    async fn put_bytes<KEY>(&self, value: Vec<u8>, key: &KEY) -> Result<(), S3Error>
     where
-        K: Key + Send + Sync,
+        KEY: Key + Send + Sync,
     {
         self.inner
             .put_object()
@@ -65,11 +65,11 @@ impl S3 {
     }
 
     #[inline]
-    pub async fn get_object<T, K>(&self, key: &K) -> Result<T, S3Error>
+    pub async fn get_object<RETURN, KEY>(&self, key: &KEY) -> Result<RETURN, S3Error>
     where
-        T: DeserializeOwned + Send + Sync,
-        K: Key + Send + Sync,
-        <K as Key>::Error: ToString,
+        RETURN: DeserializeOwned + Send + Sync,
+        KEY: Key + Send + Sync,
+        <KEY as Key>::Error: ToString,
     {
         let object = self
             .inner
@@ -120,11 +120,11 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<Vec<Option<String>>,
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-async fn parse_s3_object<T, K>(object: GetObjectOutput, key: &K) -> Result<T, S3Error>
+async fn parse_s3_object<RETURN, KEY>(object: GetObjectOutput, key: &KEY) -> Result<RETURN, S3Error>
 where
-    T: DeserializeOwned + Send + Sync,
-    K: Key + Send + Sync,
-    <K as Key>::Error: ToString,
+    RETURN: DeserializeOwned + Send + Sync,
+    KEY: Key + Send + Sync,
+    <KEY as Key>::Error: ToString,
 {
     if object.content_length().unwrap_or_default() == 0 {
         Err(S3Error::NotExistsObject(key.name().to_owned()))
@@ -143,14 +143,17 @@ where
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-fn parse_aggregated_bytes<T, K>(content: AggregatedBytes, key: &K) -> Result<T, S3Error>
+fn parse_aggregated_bytes<RETURN, KEY>(
+    content: AggregatedBytes,
+    key: &KEY,
+) -> Result<RETURN, S3Error>
 where
-    T: DeserializeOwned + Send + Sync,
-    K: Key + Send + Sync,
-    <K as Key>::Error: ToString,
+    RETURN: DeserializeOwned + Send + Sync,
+    KEY: Key + Send + Sync,
+    <KEY as Key>::Error: ToString,
 {
     let object = key
-        .deserialize_value::<T>(&content.to_vec())
+        .deserialize_value::<RETURN>(&content.to_vec())
         .map_err(|err| S3Error::Serde {
             operation: "parse_aggregated_bytes".to_owned(),
             key: key.name().to_owned(),
