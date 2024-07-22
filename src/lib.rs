@@ -10,6 +10,7 @@
 use serde::Serialize;
 
 pub mod s3;
+pub mod index;
 
 #[derive(Debug)]
 pub enum S3Error {

@@ -87,6 +87,33 @@ impl S3 {
             }),
         }
     }
+
+    #[inline]
+    pub async fn list<T, K>(&self, key: &K, value: &T) -> Result<Vec<Option<String>>, S3Error>
+    where
+        T: Serialize + Send + Sync,
+        K: Key + Send + Sync,
+        <K as Key>::Error: ToString + Send + Sync,
+    {
+        let list = self
+            .inner
+            .list_objects_v2()
+            .bucket(&self.bucket)
+            .prefix("/wal")
+            .set_delimiter(Some("/".to_owned()))
+            .send()
+            .await
+            .unwrap();
+
+        let list: Vec<_> = list
+            .contents
+            .unwrap()
+            .into_iter()
+            .map(|content| content.key)
+            .collect();
+
+        todo!()
+    }
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
