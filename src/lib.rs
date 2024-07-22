@@ -44,13 +44,13 @@ pub trait Key {
 
     fn name<'src>(&self) -> &'src str;
 
-    fn serialize_value<T>(&self, value: &T) -> Result<Vec<u8>, Self::Error>
+    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
     where
-        T: Serialize + Send;
+        VALUE: Serialize + Send;
 
-    fn deserialize_value<T>(&self, content: &[u8]) -> Result<T, Self::Error>
+    fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, Self::Error>
     where
-        T: for<'content> serde::Deserialize<'content>;
+        CONTENT: for<'content> serde::Deserialize<'content>;
 
     fn mime(&self) -> String;
 }

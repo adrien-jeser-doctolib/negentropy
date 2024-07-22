@@ -1051,7 +1051,7 @@ dependencies = [
 
 [[package]]
 name = "negentropy"
-version = "0.1.0"
+version = "0.1.0+taxus-baccata"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
