@@ -9,8 +9,8 @@
 
 use serde::Serialize;
 
-pub mod s3;
 pub mod index;
+pub mod s3;
 
 #[derive(Debug)]
 pub enum S3Error {
@@ -29,8 +29,12 @@ pub enum S3Error {
         key: String,
         internal: String,
     },
-    Query(String),
-    NotExistsBucket(String),
+    S3List {
+        operation: String,
+        prefix: String,
+        internal: Option<String>,
+    },
+    S3ListHandle,
     NotExistsObject(String),
     EnvConfig(String),
 }

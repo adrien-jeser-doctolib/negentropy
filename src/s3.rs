@@ -1,6 +1,7 @@
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
@@ -89,31 +90,33 @@ impl S3 {
     }
 
     #[inline]
-    pub async fn list<T, K>(&self, key: &K, value: &T) -> Result<Vec<Option<String>>, S3Error>
-    where
-        T: Serialize + Send + Sync,
-        K: Key + Send + Sync,
-        <K as Key>::Error: ToString + Send + Sync,
-    {
+    pub async fn list_objects(&self, prefix: &str) -> Result<Vec<Option<String>>, S3Error> {
         let list = self
             .inner
             .list_objects_v2()
             .bucket(&self.bucket)
-            .prefix("/wal")
+            .prefix(prefix)
             .set_delimiter(Some("/".to_owned()))
             .send()
-            .await
-            .unwrap();
+            .await;
 
-        let list: Vec<_> = list
-            .contents
-            .unwrap()
-            .into_iter()
-            .map(|content| content.key)
-            .collect();
-
-        todo!()
+        match list {
+            Ok(list_output) => handle_list_objects(list_output),
+            Err(err) => Err(S3Error::S3List {
+                operation: "list_objects".to_owned(),
+                prefix: prefix.to_owned(),
+                internal: Some(err.to_string()),
+            }),
+        }
     }
+}
+
+#[expect(clippy::single_call_fn, reason = "code readability")]
+fn handle_list_objects(list: ListObjectsV2Output) -> Result<Vec<Option<String>>, S3Error> {
+    list.contents
+        .map_or(Err(S3Error::S3ListHandle), |contents| {
+            Ok(contents.into_iter().map(|content| content.key).collect())
+        })
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
