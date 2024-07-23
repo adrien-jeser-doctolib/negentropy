@@ -1,4 +1,4 @@
-use crate::{s3::S3, Json, KeyWithParser, LiveKey, S3Error, Storage};
+use crate::{parser::Json, s3::S3, KeyWithParser, LiveKey, S3Error, Storage};
 use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 
