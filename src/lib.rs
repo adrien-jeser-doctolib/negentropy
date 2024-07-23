@@ -105,70 +105,73 @@ where
 }
 
 pub trait Storage {
-    fn exists<KEY>(&self, key: &KEY) -> impl Future<Output = Result<bool, S3Error>>
+    fn exists<KWP>(&self, key_with_parser: &KWP) -> impl Future<Output = Result<bool, S3Error>>
     where
-        KEY: Key + Send + Sync;
+        KWP: Key + Send + Sync;
 
     #[inline]
-    fn put_object_if_not_exists<KEY, VALUE>(
+    fn put_object_if_not_exists<KWP, VALUE>(
         &self,
-        key: &KEY,
+        key_with_parser: &KWP,
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, S3Error>>
     where
-        KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString + Send + Sync,
+        KWP: Key + Send + Sync,
+        <KWP as Key>::Error: ToString + Send + Sync,
         VALUE: Serialize + Send + Sync,
         Self: Sync,
     {
         async {
-            if self.exists(key).await? {
+            if self.exists(key_with_parser).await? {
                 Ok(false)
             } else {
-                self.put_object(key, value).await?;
+                self.put_object(key_with_parser, value).await?;
                 Ok(true)
             }
         }
     }
 
     #[inline]
-    fn put_object<VALUE, KEY>(
+    fn put_object<VALUE, KWP>(
         &self,
-        key: &KEY,
+        key_with_parser: &KWP,
         value: &VALUE,
     ) -> impl Future<Output = Result<&Self, S3Error>>
     where
         VALUE: Serialize + Send + Sync,
-        KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString + Send + Sync,
+        KWP: Key + Send + Sync,
+        <KWP as Key>::Error: ToString + Send + Sync,
     {
         async {
-            let serialize = key.serialize_value(value);
+            let serialize = key_with_parser.serialize_value(value);
 
             match serialize {
-                Ok(res) => self.put_bytes(res, key).await,
+                Ok(res) => self.put_bytes(res, key_with_parser).await,
                 Err(err) => Err(S3Error::S3Object {
                     operation: "put_object".to_owned(),
-                    key: key.name(),
+                    key: key_with_parser.name(),
                     internal: err.to_string(),
                 }),
             }
         }
     }
 
-    fn put_bytes<KEY>(
+    fn put_bytes<KWP>(
         &self,
         value: Vec<u8>,
-        key: &KEY,
+        key_with_parser: &KWP,
     ) -> impl Future<Output = Result<&Self, S3Error>> + Send
     where
-        KEY: Key + Send + Sync;
+        KWP: Key + Send + Sync;
 
-    fn get_object<RETURN, KEY>(&self, key: &KEY) -> impl Future<Output = Result<RETURN, S3Error>>
+    fn get_object<RETURN, KWP>(
+        &self,
+        key_with_parser: &KWP,
+    ) -> impl Future<Output = Result<RETURN, S3Error>>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString;
+        KWP: Key + Send + Sync,
+        <KWP as Key>::Error: ToString;
 
     fn list_objects(
         &self,
