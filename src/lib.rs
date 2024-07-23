@@ -164,14 +164,15 @@ pub trait Storage {
     where
         KWP: Key + Send + Sync;
 
-    fn get_object<RETURN, KWP>(
+    fn get_object<RETURN, KEY, PARSER>(
         &self,
-        key_with_parser: &KWP,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> impl Future<Output = Result<RETURN, S3Error>>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KWP: Key + Send + Sync,
-        <KWP as Key>::Error: ToString;
+        KEY: Key + Send + Sync,
+        PARSER: Parser,
+        <PARSER as Parser>::Error: ToString;
 
     fn list_objects(
         &self,

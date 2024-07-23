@@ -9,7 +9,7 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 use std::env;
 
-use crate::{Key, S3Error, Storage};
+use crate::{Key, KeyWithParser, Parser, S3Error, Storage};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -79,17 +79,21 @@ impl Storage for S3 {
     }
 
     #[inline]
-    async fn get_object<RETURN, KWP>(&self, key_with_parser: &KWP) -> Result<RETURN, S3Error>
+    async fn get_object<RETURN, KEY, PARSER>(
+        &self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> Result<RETURN, S3Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KWP: Key + Send + Sync,
-        <KWP as Key>::Error: ToString,
+        KEY: Key + Send + Sync,
+        PARSER: Parser,
+        <PARSER as Parser>::Error: ToString,
     {
         let object = self
             .inner
             .get_object()
             .bucket(&self.bucket)
-            .key(key_with_parser.name())
+            .key(key_with_parser.key().name())
             .send()
             .await;
 
@@ -97,7 +101,7 @@ impl Storage for S3 {
             Ok(object_output) => parse_s3_object(object_output, key_with_parser).await,
             Err(err) => Err(S3Error::S3Object {
                 operation: "get_object".to_owned(),
-                key: key_with_parser.name(),
+                key: key_with_parser.key().name(),
                 internal: err.to_string(),
             }),
         }
@@ -134,17 +138,18 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<Vec<Option<String>>,
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-async fn parse_s3_object<RETURN, KWP>(
+async fn parse_s3_object<RETURN, KEY, PARSER>(
     object: GetObjectOutput,
-    key_with_parser: &KWP,
+    key_with_parser: &KeyWithParser<KEY, PARSER>,
 ) -> Result<RETURN, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
-    KWP: Key + Send + Sync,
-    <KWP as Key>::Error: ToString,
+    KEY: Key + Send + Sync,
+    PARSER: Parser,
+    <PARSER as Parser>::Error: ToString,
 {
     if object.content_length().unwrap_or_default() == 0 {
-        Err(S3Error::NotExistsObject(key_with_parser.name()))
+        Err(S3Error::NotExistsObject(key_with_parser.key().name()))
     } else {
         let try_decoding = object.body.collect().await;
 
@@ -152,7 +157,7 @@ where
             Ok(content) => parse_aggregated_bytes(content, key_with_parser),
             Err(err) => Err(S3Error::S3Object {
                 operation: "parse_s3_object".to_owned(),
-                key: key_with_parser.name(),
+                key: key_with_parser.key().name(),
                 internal: err.to_string(),
             }),
         }
@@ -160,20 +165,22 @@ where
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-fn parse_aggregated_bytes<RETURN, KWP>(
+fn parse_aggregated_bytes<RETURN, KEY, PARSER>(
     content: AggregatedBytes,
-    key_with_parser: &KWP,
+    key_with_parser: &KeyWithParser<KEY, PARSER>,
 ) -> Result<RETURN, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
-    KWP: Key + Send + Sync,
-    <KWP as Key>::Error: ToString,
+    KEY: Key + Send + Sync,
+    PARSER: Parser,
+    <PARSER as Parser>::Error: ToString,
 {
     let object = key_with_parser
+        .parser()
         .deserialize_value::<RETURN>(&content.to_vec())
         .map_err(|err| S3Error::Serde {
             operation: "parse_aggregated_bytes".to_owned(),
-            key: key_with_parser.name(),
+            key: key_with_parser.key().name(),
             internal: err.to_string(),
         })?;
 
