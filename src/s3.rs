@@ -1,6 +1,8 @@
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::config::Builder;
+use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
@@ -23,6 +25,34 @@ impl S3 {
             inner: create_client().await?,
             bucket,
         })
+    }
+
+    #[inline]
+    pub async fn exists<KEY>(&self, key: &KEY) -> Result<bool, S3Error>
+    where
+        KEY: Key + Send + Sync,
+    {
+        let head_object = self
+            .inner
+            .head_object()
+            .bucket(&self.bucket)
+            .key(key.name())
+            .send()
+            .await;
+
+        match head_object {
+            Ok(_) => Ok(true),
+            Err(SdkError::ServiceError(err))
+                if matches!(err.err(), &HeadObjectError::NotFound(_)) =>
+            {
+                Ok(false)
+            }
+            Err(err) => Err(S3Error::S3Exists {
+                operation: "exists".to_owned(),
+                key: key.name().to_owned(),
+                internal: err.to_string(),
+            }),
+        }
     }
 
     #[inline]

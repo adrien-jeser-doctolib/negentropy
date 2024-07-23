@@ -34,6 +34,11 @@ pub enum S3Error {
         prefix: String,
         internal: Option<String>,
     },
+    S3Exists {
+        operation: String,
+        key: String,
+        internal: String,
+    },
     S3ListHandle,
     NotExistsObject(String),
     EnvConfig(String),
@@ -53,4 +58,41 @@ pub trait Key {
         CONTENT: for<'content> serde::Deserialize<'content>;
 
     fn mime(&self) -> String;
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub enum IndexKey {
+    Welcome,
+}
+
+impl Key for IndexKey {
+    type Error = serde_json::Error;
+
+    #[inline]
+    fn name<'src>(&self) -> &'src str {
+        match *self {
+            Self::Welcome => "welcome",
+        }
+    }
+
+    #[inline]
+    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
+    where
+        VALUE: Serialize + Send,
+    {
+        serde_json::to_vec(value)
+    }
+
+    #[inline]
+    fn deserialize_value<RETURN>(&self, content: &[u8]) -> Result<RETURN, Self::Error>
+    where
+        RETURN: for<'content> serde::Deserialize<'content>,
+    {
+        serde_json::from_slice(content)
+    }
+
+    #[inline]
+    fn mime(&self) -> String {
+        "application/json".to_owned()
+    }
 }
