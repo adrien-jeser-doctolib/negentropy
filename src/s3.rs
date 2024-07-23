@@ -7,10 +7,9 @@ use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::env;
 
-use crate::{Key, S3Error};
+use crate::{Key, S3Error, Storage};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -26,9 +25,11 @@ impl S3 {
             bucket,
         })
     }
+}
 
+impl Storage for S3 {
     #[inline]
-    pub async fn exists<KEY>(&self, key: &KEY) -> Result<bool, S3Error>
+    async fn exists<KEY>(&self, key: &KEY) -> Result<bool, S3Error>
     where
         KEY: Key + Send + Sync,
     {
@@ -56,43 +57,6 @@ impl S3 {
     }
 
     #[inline]
-    pub async fn put_object_if_not_exists<KEY, VALUE>(
-        &self,
-        key: &KEY,
-        value: &VALUE,
-    ) -> Result<bool, S3Error>
-    where
-        KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString + Send + Sync,
-        VALUE: Serialize + Send + Sync,
-    {
-        if self.exists(key).await? {
-            Ok(false)
-        } else {
-            self.put_object(key, value).await?;
-            Ok(true)
-        }
-    }
-
-    #[inline]
-    pub async fn put_object<VALUE, KEY>(&self, key: &KEY, value: &VALUE) -> Result<&Self, S3Error>
-    where
-        VALUE: Serialize + Send + Sync,
-        KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString + Send + Sync,
-    {
-        let serialize = key.serialize_value(value);
-
-        match serialize {
-            Ok(res) => self.put_bytes(res, key).await,
-            Err(err) => Err(S3Error::S3Object {
-                operation: "put_object".to_owned(),
-                key: key.name(),
-                internal: err.to_string(),
-            }),
-        }
-    }
-
     async fn put_bytes<KEY>(&self, value: Vec<u8>, key: &KEY) -> Result<&Self, S3Error>
     where
         KEY: Key + Send + Sync,
@@ -115,7 +79,7 @@ impl S3 {
     }
 
     #[inline]
-    pub async fn get_object<RETURN, KEY>(&self, key: &KEY) -> Result<RETURN, S3Error>
+    async fn get_object<RETURN, KEY>(&self, key: &KEY) -> Result<RETURN, S3Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
         KEY: Key + Send + Sync,
@@ -140,7 +104,7 @@ impl S3 {
     }
 
     #[inline]
-    pub async fn list_objects(&self, prefix: &str) -> Result<Vec<Option<String>>, S3Error> {
+    async fn list_objects(&self, prefix: &str) -> Result<Vec<Option<String>>, S3Error> {
         let list = self
             .inner
             .list_objects_v2()
@@ -177,7 +141,7 @@ where
     <KEY as Key>::Error: ToString,
 {
     if object.content_length().unwrap_or_default() == 0 {
-        Err(S3Error::NotExistsObject(key.name().to_owned()))
+        Err(S3Error::NotExistsObject(key.name()))
     } else {
         let try_decoding = object.body.collect().await;
 

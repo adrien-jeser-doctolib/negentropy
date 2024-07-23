@@ -6,8 +6,11 @@
 )]
 #![expect(clippy::missing_docs_in_private_items, reason = "unstable lib")]
 #![expect(clippy::missing_errors_doc, reason = "unstable api")]
+#![expect(clippy::ref_patterns, reason = "ref is idiomatic")]
+#![expect(clippy::missing_trait_methods, reason = "add only specific trait")]
 
-use serde::Serialize;
+use core::{future::Future, option::Option};
+use serde::{de::DeserializeOwned, Serialize};
 
 pub mod live;
 pub mod s3;
@@ -60,6 +63,78 @@ pub trait Key {
     fn mime(&self) -> String;
 }
 
+pub trait Storage {
+    fn exists<KEY>(&self, key: &KEY) -> impl Future<Output = Result<bool, S3Error>>
+    where
+        KEY: Key + Send + Sync;
+
+    #[inline]
+    fn put_object_if_not_exists<KEY, VALUE>(
+        &self,
+        key: &KEY,
+        value: &VALUE,
+    ) -> impl Future<Output = Result<bool, S3Error>>
+    where
+        KEY: Key + Send + Sync,
+        <KEY as Key>::Error: ToString + Send + Sync,
+        VALUE: Serialize + Send + Sync,
+        Self: Sync,
+    {
+        async {
+            if self.exists(key).await? {
+                Ok(false)
+            } else {
+                self.put_object(key, value).await?;
+                Ok(true)
+            }
+        }
+    }
+
+    #[inline]
+    fn put_object<VALUE, KEY>(
+        &self,
+        key: &KEY,
+        value: &VALUE,
+    ) -> impl Future<Output = Result<&Self, S3Error>>
+    where
+        VALUE: Serialize + Send + Sync,
+        KEY: Key + Send + Sync,
+        <KEY as Key>::Error: ToString + Send + Sync,
+    {
+        async {
+            let serialize = key.serialize_value(value);
+
+            match serialize {
+                Ok(res) => self.put_bytes(res, key).await,
+                Err(err) => Err(S3Error::S3Object {
+                    operation: "put_object".to_owned(),
+                    key: key.name(),
+                    internal: err.to_string(),
+                }),
+            }
+        }
+    }
+
+    fn put_bytes<KEY>(
+        &self,
+        value: Vec<u8>,
+        key: &KEY,
+    ) -> impl Future<Output = Result<&Self, S3Error>> + Send
+    where
+        KEY: Key + Send + Sync;
+
+    fn get_object<RETURN, KEY>(&self, key: &KEY) -> impl Future<Output = Result<RETURN, S3Error>>
+    where
+        RETURN: DeserializeOwned + Send + Sync,
+        KEY: Key + Send + Sync,
+        <KEY as Key>::Error: ToString;
+
+    fn list_objects(
+        &self,
+        prefix: &str,
+    ) -> impl Future<Output = Result<Vec<Option<String>>, S3Error>>;
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub enum LiveKey {
     Welcome,
@@ -71,9 +146,9 @@ impl Key for LiveKey {
 
     #[inline]
     fn name(&self) -> String {
-        match self {
+        match *self {
             Self::Welcome => "live/welcome".to_owned(),
-            Self::Alive(id) => format!("live/alive-{id}"),
+            Self::Alive(ref id) => format!("live/alive-{id}"),
         }
     }
 
