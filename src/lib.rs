@@ -163,7 +163,10 @@ pub trait Storage {
         PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString;
 
-    fn list_objects(&self, prefix: &str) -> impl Future<Output = Result<ListKeyObjects, S3Error>>;
+    fn list_objects(
+        &self,
+        prefix: &str,
+    ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>>;
 }
 
 #[derive(Debug, Clone, Serialize)]
