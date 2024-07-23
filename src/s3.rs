@@ -9,7 +9,9 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 use std::env;
 
-use crate::{KeyWhere, KeyWithParser, Parser, ParserWhere, S3Error, Storage};
+use crate::{
+    KeyWhere, KeyWithParser, ListKeyObjects, Parser, ParserWhere, S3Error, Storage, ValueWhere,
+};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -28,11 +30,13 @@ impl S3 {
 }
 
 impl Storage for S3 {
+    type Error = S3Error;
+
     #[inline]
     async fn exists<KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
-    ) -> Result<bool, S3Error>
+    ) -> Result<bool, Self::Error>
     where
         KEY: KeyWhere,
         PARSER: ParserWhere,
@@ -61,11 +65,35 @@ impl Storage for S3 {
     }
 
     #[inline]
+    async fn put_object<VALUE, KEY, PARSER>(
+        &self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        value: &VALUE,
+    ) -> Result<&Self, Self::Error>
+    where
+        VALUE: ValueWhere,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
+        <PARSER as Parser>::Error: ToString,
+    {
+        let serialize = key_with_parser.parser().serialize_value(value);
+
+        match serialize {
+            Ok(res) => self.put_bytes(res, key_with_parser).await,
+            Err(err) => Err(S3Error::S3Object {
+                operation: "put_object".to_owned(),
+                key: key_with_parser.key().name(),
+                internal: err.to_string(),
+            }),
+        }
+    }
+
+    #[inline]
     async fn put_bytes<KEY, PARSER>(
         &self,
         value: Vec<u8>,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
-    ) -> Result<&Self, S3Error>
+    ) -> Result<&Self, Self::Error>
     where
         KEY: KeyWhere,
         PARSER: ParserWhere,
@@ -91,7 +119,7 @@ impl Storage for S3 {
     async fn get_object<RETURN, KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
-    ) -> Result<RETURN, S3Error>
+    ) -> Result<RETURN, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
@@ -117,7 +145,7 @@ impl Storage for S3 {
     }
 
     #[inline]
-    async fn list_objects(&self, prefix: &str) -> Result<Vec<Option<String>>, S3Error> {
+    async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
         let list = self
             .inner
             .list_objects_v2()
