@@ -63,6 +63,47 @@ pub trait Key {
     fn mime(&self) -> String;
 }
 
+pub trait Parser {
+    type Error;
+
+    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
+    where
+        VALUE: Serialize + Send;
+
+    fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, Self::Error>
+    where
+        CONTENT: for<'content> serde::Deserialize<'content>;
+
+    fn mime(&self) -> String;
+}
+
+pub struct KeyWithParser<KEY, PARSER>
+where
+    KEY: Key,
+    PARSER: Parser,
+{
+    key: KEY,
+    parser: PARSER,
+}
+
+impl<KEY, PARSER> KeyWithParser<KEY, PARSER>
+where
+    KEY: Key,
+    PARSER: Parser,
+{
+    pub fn new(key: KEY, parser: PARSER) -> Self {
+        Self { key, parser }
+    }
+
+    pub fn key(&self) -> &KEY {
+        &self.key
+    }
+
+    pub fn parser(&self) -> &PARSER {
+        &self.parser
+    }
+}
+
 pub trait Storage {
     fn exists<KEY>(&self, key: &KEY) -> impl Future<Output = Result<bool, S3Error>>
     where
