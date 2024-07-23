@@ -48,19 +48,7 @@ pub enum S3Error {
 }
 
 pub trait Key {
-    type Error;
-
     fn name(&self) -> String;
-
-    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
-    where
-        VALUE: Serialize + Send;
-
-    fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, Self::Error>
-    where
-        CONTENT: for<'content> serde::Deserialize<'content>;
-
-    fn mime(&self) -> String;
 }
 
 pub trait Parser {
@@ -149,7 +137,6 @@ pub trait Storage {
     ) -> impl Future<Output = Result<bool, S3Error>>
     where
         KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString + Send + Sync,
         PARSER: Parser + Send + Sync,
         <PARSER as Parser>::Error: ToString,
         VALUE: Serialize + Send + Sync,
@@ -174,7 +161,6 @@ pub trait Storage {
     where
         VALUE: Serialize + Send + Sync,
         KEY: Key + Send + Sync,
-        <KEY as Key>::Error: ToString + Send + Sync,
         PARSER: Parser + Send + Sync,
         <PARSER as Parser>::Error: ToString,
     {
@@ -224,34 +210,11 @@ pub enum LiveKey {
 }
 
 impl Key for LiveKey {
-    type Error = serde_json::Error;
-
     #[inline]
     fn name(&self) -> String {
         match *self {
             Self::Welcome => "live/welcome".to_owned(),
             Self::Alive(ref id) => format!("live/alive-{id}"),
         }
-    }
-
-    #[inline]
-    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
-    where
-        VALUE: Serialize + Send,
-    {
-        serde_json::to_vec(value)
-    }
-
-    #[inline]
-    fn deserialize_value<RETURN>(&self, content: &[u8]) -> Result<RETURN, Self::Error>
-    where
-        RETURN: for<'content> serde::Deserialize<'content>,
-    {
-        serde_json::from_slice(content)
-    }
-
-    #[inline]
-    fn mime(&self) -> String {
-        "application/json".to_owned()
     }
 }
