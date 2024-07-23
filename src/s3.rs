@@ -9,7 +9,7 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 use std::env;
 
-use crate::{Key, KeyWithParser, Parser, S3Error, Storage};
+use crate::{KeyWhere, KeyWithParser, Parser, ParserWhere, S3Error, Storage};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -34,8 +34,8 @@ impl Storage for S3 {
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> Result<bool, S3Error>
     where
-        KEY: Key + Send + Sync,
-        PARSER: Parser + Send + Sync,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
     {
         let head_object = self
             .inner
@@ -67,8 +67,8 @@ impl Storage for S3 {
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> Result<&Self, S3Error>
     where
-        KEY: Key + Send + Sync,
-        PARSER: Parser + Send + Sync,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
     {
         self.inner
             .put_object()
@@ -94,8 +94,8 @@ impl Storage for S3 {
     ) -> Result<RETURN, S3Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KEY: Key + Send + Sync,
-        PARSER: Parser,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString,
     {
         let object = self
@@ -153,8 +153,8 @@ async fn parse_s3_object<RETURN, KEY, PARSER>(
 ) -> Result<RETURN, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
-    KEY: Key + Send + Sync,
-    PARSER: Parser,
+    KEY: KeyWhere,
+    PARSER: ParserWhere,
     <PARSER as Parser>::Error: ToString,
 {
     if object.content_length().unwrap_or_default() == 0 {
@@ -180,8 +180,8 @@ fn parse_aggregated_bytes<RETURN, KEY, PARSER>(
 ) -> Result<RETURN, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
-    KEY: Key + Send + Sync,
-    PARSER: Parser,
+    KEY: KeyWhere,
+    PARSER: ParserWhere,
     <PARSER as Parser>::Error: ToString,
 {
     let object = key_with_parser

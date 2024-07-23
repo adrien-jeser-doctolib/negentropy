@@ -1,3 +1,4 @@
+#![feature(trait_alias)]
 #![expect(clippy::implicit_return, reason = "return is idiomatic")]
 #![expect(clippy::exhaustive_enums, reason = "break enum is acceptable")]
 #![expect(
@@ -57,7 +58,7 @@ pub trait Parser {
 
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
     where
-        VALUE: Serialize + Send;
+        VALUE: ValueWhere;
 
     fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, Self::Error>
     where
@@ -93,14 +94,18 @@ where
     }
 }
 
+pub trait KeyWhere = Key + Send + Sync;
+pub trait ParserWhere = Parser + Send + Sync;
+pub trait ValueWhere = Serialize + Send + Sync;
+
 pub trait Storage {
     fn exists<KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> impl Future<Output = Result<bool, S3Error>>
     where
-        KEY: Key + Send + Sync,
-        PARSER: Parser + Send + Sync;
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
 
     #[inline]
     fn put_object_if_not_exists<KEY, PARSER, VALUE>(
@@ -109,10 +114,10 @@ pub trait Storage {
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, S3Error>>
     where
-        KEY: Key + Send + Sync,
-        PARSER: Parser + Send + Sync,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString,
-        VALUE: Serialize + Send + Sync,
+        VALUE: ValueWhere,
         Self: Sync,
     {
         async {
@@ -132,9 +137,9 @@ pub trait Storage {
         value: &VALUE,
     ) -> impl Future<Output = Result<&Self, S3Error>>
     where
-        VALUE: Serialize + Send + Sync,
-        KEY: Key + Send + Sync,
-        PARSER: Parser + Send + Sync,
+        VALUE: ValueWhere,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString,
     {
         async {
@@ -157,8 +162,8 @@ pub trait Storage {
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> impl Future<Output = Result<&Self, S3Error>> + Send
     where
-        KEY: Key + Send + Sync,
-        PARSER: Parser + Send + Sync;
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
 
     fn get_object<RETURN, KEY, PARSER>(
         &self,
@@ -166,8 +171,8 @@ pub trait Storage {
     ) -> impl Future<Output = Result<RETURN, S3Error>>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KEY: Key + Send + Sync,
-        PARSER: Parser,
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString;
 
     fn list_objects(
