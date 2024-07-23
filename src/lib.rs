@@ -9,7 +9,7 @@
 
 use serde::Serialize;
 
-pub mod index;
+pub mod live;
 pub mod s3;
 
 #[derive(Debug)]
@@ -47,7 +47,7 @@ pub enum S3Error {
 pub trait Key {
     type Error;
 
-    fn name<'src>(&self) -> &'src str;
+    fn name(&self) -> String;
 
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
     where
@@ -61,17 +61,19 @@ pub trait Key {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub enum IndexKey {
+pub enum LiveKey {
     Welcome,
+    Alive(String),
 }
 
-impl Key for IndexKey {
+impl Key for LiveKey {
     type Error = serde_json::Error;
 
     #[inline]
-    fn name<'src>(&self) -> &'src str {
-        match *self {
-            Self::Welcome => "welcome",
+    fn name(&self) -> String {
+        match self {
+            Self::Welcome => "live/welcome".to_owned(),
+            Self::Alive(id) => format!("live/alive-{id}"),
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::{s3::S3, IndexKey, S3Error};
+use crate::{s3::S3, LiveKey, S3Error};
 use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 
@@ -23,8 +23,9 @@ impl Default for Welcome {
 }
 
 #[inline]
-pub async fn always_welcome(s3: &S3) -> Result<Welcome, S3Error> {
+pub async fn welcome(s3: &S3) -> Result<Welcome, S3Error> {
     let welcome = Welcome::default();
-    s3.put_object(&IndexKey::Welcome, &welcome).await?;
+    s3.put_object_if_not_exists(&LiveKey::Welcome, &welcome)
+        .await?;
     Ok(welcome)
 }

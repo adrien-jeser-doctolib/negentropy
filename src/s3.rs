@@ -49,14 +49,33 @@ impl S3 {
             }
             Err(err) => Err(S3Error::S3Exists {
                 operation: "exists".to_owned(),
-                key: key.name().to_owned(),
+                key: key.name(),
                 internal: err.to_string(),
             }),
         }
     }
 
     #[inline]
-    pub async fn put_object<VALUE, KEY>(&self, key: &KEY, value: &VALUE) -> Result<(), S3Error>
+    pub async fn put_object_if_not_exists<KEY, VALUE>(
+        &self,
+        key: &KEY,
+        value: &VALUE,
+    ) -> Result<bool, S3Error>
+    where
+        KEY: Key + Send + Sync,
+        <KEY as Key>::Error: ToString + Send + Sync,
+        VALUE: Serialize + Send + Sync,
+    {
+        if self.exists(key).await? {
+            Ok(false)
+        } else {
+            self.put_object(key, value).await?;
+            Ok(true)
+        }
+    }
+
+    #[inline]
+    pub async fn put_object<VALUE, KEY>(&self, key: &KEY, value: &VALUE) -> Result<&Self, S3Error>
     where
         VALUE: Serialize + Send + Sync,
         KEY: Key + Send + Sync,
@@ -68,13 +87,13 @@ impl S3 {
             Ok(res) => self.put_bytes(res, key).await,
             Err(err) => Err(S3Error::S3Object {
                 operation: "put_object".to_owned(),
-                key: key.name().to_owned(),
+                key: key.name(),
                 internal: err.to_string(),
             }),
         }
     }
 
-    async fn put_bytes<KEY>(&self, value: Vec<u8>, key: &KEY) -> Result<(), S3Error>
+    async fn put_bytes<KEY>(&self, value: Vec<u8>, key: &KEY) -> Result<&Self, S3Error>
     where
         KEY: Key + Send + Sync,
     {
@@ -86,12 +105,13 @@ impl S3 {
             .set_content_type(Some(key.mime()))
             .send()
             .await
-            .map(|_| ())
             .map_err(|err| S3Error::S3Object {
                 operation: "put_bytes".to_owned(),
-                key: key.name().to_owned(),
+                key: key.name(),
                 internal: err.to_string(),
-            })
+            })?;
+
+        Ok(self)
     }
 
     #[inline]
@@ -113,7 +133,7 @@ impl S3 {
             Ok(object_output) => parse_s3_object(object_output, key).await,
             Err(err) => Err(S3Error::S3Object {
                 operation: "get_object".to_owned(),
-                key: key.name().to_owned(),
+                key: key.name(),
                 internal: err.to_string(),
             }),
         }
@@ -165,7 +185,7 @@ where
             Ok(content) => parse_aggregated_bytes(content, key),
             Err(err) => Err(S3Error::S3Object {
                 operation: "parse_s3_object".to_owned(),
-                key: key.name().to_owned(),
+                key: key.name(),
                 internal: err.to_string(),
             }),
         }
@@ -186,7 +206,7 @@ where
         .deserialize_value::<RETURN>(&content.to_vec())
         .map_err(|err| S3Error::Serde {
             operation: "parse_aggregated_bytes".to_owned(),
-            key: key.name().to_owned(),
+            key: key.name(),
             internal: err.to_string(),
         })?;
 
