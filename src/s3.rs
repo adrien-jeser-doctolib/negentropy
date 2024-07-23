@@ -29,15 +29,19 @@ impl S3 {
 
 impl Storage for S3 {
     #[inline]
-    async fn exists<KWP>(&self, key_with_parser: &KWP) -> Result<bool, S3Error>
+    async fn exists<KEY, PARSER>(
+        &self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> Result<bool, S3Error>
     where
-        KWP: Key + Send + Sync,
+        KEY: Key + Send + Sync,
+        PARSER: Parser + Send + Sync,
     {
         let head_object = self
             .inner
             .head_object()
             .bucket(&self.bucket)
-            .key(key_with_parser.name())
+            .key(key_with_parser.key().name())
             .send()
             .await;
 
@@ -50,28 +54,33 @@ impl Storage for S3 {
             }
             Err(err) => Err(S3Error::S3Exists {
                 operation: "exists".to_owned(),
-                key: key_with_parser.name(),
+                key: key_with_parser.key().name(),
                 internal: err.to_string(),
             }),
         }
     }
 
     #[inline]
-    async fn put_bytes<KWP>(&self, value: Vec<u8>, key_with_parser: &KWP) -> Result<&Self, S3Error>
+    async fn put_bytes<KEY, PARSER>(
+        &self,
+        value: Vec<u8>,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> Result<&Self, S3Error>
     where
-        KWP: Key + Send + Sync,
+        KEY: Key + Send + Sync,
+        PARSER: Parser + Send + Sync,
     {
         self.inner
             .put_object()
             .bucket(&self.bucket)
-            .key(key_with_parser.name())
+            .key(key_with_parser.key().name())
             .body(ByteStream::from(value))
-            .set_content_type(Some(key_with_parser.mime()))
+            .set_content_type(Some(key_with_parser.parser().mime()))
             .send()
             .await
             .map_err(|err| S3Error::S3Object {
                 operation: "put_bytes".to_owned(),
-                key: key_with_parser.name(),
+                key: key_with_parser.key().name(),
                 internal: err.to_string(),
             })?;
 
