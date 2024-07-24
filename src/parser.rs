@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::Parser;
 
 #[derive(Default)]
-pub struct Json {}
+pub struct Json;
 
 impl Parser for Json {
     type Error = serde_json::Error;

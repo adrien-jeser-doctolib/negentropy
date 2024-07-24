@@ -5,10 +5,21 @@
     clippy::question_mark_used,
     reason = "not use macro to attach additional information for result"
 )]
-#![expect(clippy::missing_docs_in_private_items, reason = "unstable lib")]
-#![expect(clippy::missing_errors_doc, reason = "unstable api")]
+#![expect(
+    clippy::missing_docs_in_private_items,
+    reason = "negentropy is a unstable lib"
+)]
+#![expect(clippy::missing_errors_doc, reason = "negentropy is a unstable api")]
 #![expect(clippy::ref_patterns, reason = "ref is idiomatic")]
-#![expect(clippy::missing_trait_methods, reason = "add only specific trait")]
+#![expect(
+    clippy::missing_trait_methods,
+    reason = "add only with lint on specific trait"
+)]
+#![expect(
+    clippy::self_named_module_files,
+    reason = "conflict with mod_module_files lint"
+)]
+#![expect(clippy::exhaustive_structs, reason = "Accept breaking struct")]
 
 use core::option::Option;
 use serde::Serialize;
@@ -16,7 +27,6 @@ use storage::ValueWhere;
 
 pub mod live;
 pub mod parser;
-pub mod s3;
 pub mod storage;
 
 #[derive(Debug)]
@@ -83,15 +93,18 @@ where
     KEY: Key,
     PARSER: Parser,
 {
-    pub fn new(key: KEY, parser: PARSER) -> Self {
+    #[inline]
+    pub const fn new(key: KEY, parser: PARSER) -> Self {
         Self { key, parser }
     }
 
-    pub fn key(&self) -> &KEY {
+    #[inline]
+    pub const fn key(&self) -> &KEY {
         &self.key
     }
 
-    pub fn parser(&self) -> &PARSER {
+    #[inline]
+    pub const fn parser(&self) -> &PARSER {
         &self.parser
     }
 }

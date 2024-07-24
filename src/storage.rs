@@ -1,8 +1,8 @@
-use std::future::Future;
-
-use serde::{de::DeserializeOwned, Serialize};
+pub mod s3;
 
 use crate::{Key, KeyWithParser, Parser};
+use core::future::Future;
+use serde::{de::DeserializeOwned, Serialize};
 
 pub trait KeyWhere = Key + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;
@@ -15,7 +15,7 @@ pub trait Storage {
     fn exists<KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
-    ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send
+    ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
         KEY: KeyWhere,
         PARSER: ParserWhere;
