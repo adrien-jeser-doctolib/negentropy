@@ -105,7 +105,7 @@ pub trait Storage {
     fn exists<KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
-    ) -> impl Future<Output = Result<bool, Self::Error>>
+    ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send
     where
         KEY: KeyWhere,
         PARSER: ParserWhere;
