@@ -1,3 +1,4 @@
+pub mod memory;
 pub mod s3;
 
 use crate::{Key, KeyWithParser, Parser};
