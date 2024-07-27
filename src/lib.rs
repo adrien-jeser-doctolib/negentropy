@@ -21,48 +21,12 @@
 )]
 #![expect(clippy::exhaustive_structs, reason = "Accept breaking struct")]
 
-use core::option::Option;
 use serde::Serialize;
 use storage::ValueWhere;
 
 pub mod live;
 pub mod parser;
 pub mod storage;
-
-#[derive(Debug)]
-pub enum S3Error {
-    Serde {
-        operation: String,
-        key: String,
-        internal: String,
-    },
-    S3Bucket {
-        operation: String,
-        bucket: String,
-        internal: String,
-    },
-    S3Object {
-        operation: String,
-        key: String,
-        internal: String,
-    },
-    S3List {
-        operation: String,
-        prefix: String,
-        internal: Option<String>,
-    },
-    S3Exists {
-        operation: String,
-        key: String,
-        internal: String,
-    },
-    S3ListHandle,
-    NotExistsObject(String),
-    EnvConfig(String),
-}
-
-#[derive(Debug)]
-pub struct MemoryError {}
 
 pub trait Key {
     fn name(&self) -> String;

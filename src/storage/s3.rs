@@ -10,7 +10,9 @@ use serde::de::DeserializeOwned;
 use std::env;
 
 use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, Storage, ValueWhere};
-use crate::{KeyWithParser, Parser, S3Error};
+use crate::{KeyWithParser, Parser};
+
+use super::S3Error;
 
 #[derive(Debug, Clone)]
 pub struct S3 {

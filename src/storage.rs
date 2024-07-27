@@ -79,3 +79,38 @@ pub trait Storage {
         prefix: &str,
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>>;
 }
+
+#[derive(Debug)]
+pub enum S3Error {
+    Serde {
+        operation: String,
+        key: String,
+        internal: String,
+    },
+    S3Bucket {
+        operation: String,
+        bucket: String,
+        internal: String,
+    },
+    S3Object {
+        operation: String,
+        key: String,
+        internal: String,
+    },
+    S3List {
+        operation: String,
+        prefix: String,
+        internal: Option<String>,
+    },
+    S3Exists {
+        operation: String,
+        key: String,
+        internal: String,
+    },
+    S3ListHandle,
+    NotExistsObject(String),
+    EnvConfig(String),
+}
+
+#[derive(Debug)]
+pub struct MemoryError {}
