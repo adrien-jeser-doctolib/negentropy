@@ -1,3 +1,5 @@
+use std::env;
+
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::error::SdkError;
@@ -7,12 +9,10 @@ use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
-use std::env;
-
-use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, Storage, ValueWhere};
-use crate::{KeyWithParser, Parser};
 
 use super::S3Error;
+use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, Storage, ValueWhere};
+use crate::{KeyWithParser, Parser};
 
 #[derive(Debug, Clone)]
 pub struct S3 {

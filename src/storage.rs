@@ -1,9 +1,12 @@
 pub mod memory;
 pub mod s3;
 
-use crate::{Key, KeyWithParser, Parser};
 use core::future::Future;
-use serde::{de::DeserializeOwned, Serialize};
+
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+
+use crate::{Key, KeyWithParser, Parser};
 
 pub trait KeyWhere = Key + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;

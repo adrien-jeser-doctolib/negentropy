@@ -1,7 +1,8 @@
-use super::{KeyWhere, MemoryError, ParserWhere, Storage};
-use crate::{KeyWithParser, Parser};
 use gxhash::HashMap;
 use serde::de::DeserializeOwned;
+
+use super::{KeyWhere, MemoryError, ParserWhere, Storage};
+use crate::{KeyWithParser, Parser};
 
 #[derive(Default)]
 pub struct Memory {

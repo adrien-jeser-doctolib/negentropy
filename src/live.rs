@@ -1,10 +1,10 @@
-use crate::{
-    parser::Json,
-    storage::{s3::S3, S3Error, Storage},
-    KeyWithParser, LiveKey,
-};
 use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
+
+use crate::parser::Json;
+use crate::storage::s3::S3;
+use crate::storage::{S3Error, Storage};
+use crate::{KeyWithParser, LiveKey};
 
 #[derive(Serialize, Deserialize)]
 pub struct Welcome {
