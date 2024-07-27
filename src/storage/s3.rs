@@ -75,7 +75,7 @@ impl Storage for S3 {
         VALUE: ValueWhere,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString,
+        <PARSER as Parser>::Error: ToString + Send,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
 

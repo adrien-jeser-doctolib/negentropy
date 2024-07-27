@@ -12,6 +12,7 @@ pub struct Memory {
 impl Storage for Memory {
     type Error = MemoryError;
 
+    #[inline]
     async fn exists<KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
@@ -23,6 +24,7 @@ impl Storage for Memory {
         Ok(self.data.contains_key(&key_with_parser.key().name()))
     }
 
+    #[inline]
     async fn put_object<VALUE, KEY, PARSER>(
         &mut self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
@@ -32,16 +34,21 @@ impl Storage for Memory {
         VALUE: super::ValueWhere,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString,
+        <PARSER as Parser>::Error: ToString + Send,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
 
         match serialize {
             Ok(res) => self.put_bytes(res, key_with_parser).await,
-            Err(_) => todo!(),
+            Err(err) => Err(MemoryError::Serde {
+                operation: "put_object".to_owned(),
+                key: key_with_parser.key().name(),
+                internal: err.to_string(),
+            }),
         }
     }
 
+    #[inline]
     async fn put_bytes<KEY, PARSER>(
         &mut self,
         value: Vec<u8>,
@@ -55,6 +62,7 @@ impl Storage for Memory {
         Ok(self)
     }
 
+    #[inline]
     async fn get_object<RETURN, KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
@@ -69,10 +77,16 @@ impl Storage for Memory {
         key_with_parser
             .parser()
             .deserialize_value::<RETURN>(object)
-            .map_err(|err| MemoryError {})
+            .map_err(|err| todo!())
     }
 
+    #[inline]
     async fn list_objects(&self, prefix: &str) -> Result<super::ListKeyObjects, Self::Error> {
-        todo!()
+        Ok(self
+            .data
+            .iter()
+            .filter(|(key, _)| key.starts_with(prefix))
+            .map(|(key, _)| Some(key.to_owned()))
+            .collect())
     }
 }

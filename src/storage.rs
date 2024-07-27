@@ -33,7 +33,7 @@ pub trait Storage {
     where
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString,
+        <PARSER as Parser>::Error: ToString + Send,
         VALUE: ValueWhere,
         Self: Sync,
     {
@@ -56,7 +56,7 @@ pub trait Storage {
         VALUE: ValueWhere,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString;
+        <PARSER as Parser>::Error: ToString + Send;
 
     fn put_bytes<KEY, PARSER>(
         &mut self,
@@ -116,4 +116,10 @@ pub enum S3Error {
 }
 
 #[derive(Debug)]
-pub struct MemoryError {}
+pub enum MemoryError {
+    Serde {
+        operation: String,
+        key: String,
+        internal: String,
+    },
+}
