@@ -168,7 +168,7 @@ impl Storage for S3 {
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-fn handle_list_objects(list: ListObjectsV2Output) -> Result<Vec<Option<String>>, S3Error> {
+fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Error> {
     list.contents
         .map_or(Err(S3Error::S3ListHandle), |contents| {
             Ok(contents.into_iter().map(|content| content.key).collect())

@@ -3,6 +3,7 @@ pub mod s3;
 
 use core::future::Future;
 
+use gxhash::HashSet;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -11,7 +12,7 @@ use crate::{Key, KeyWithParser, Parser};
 pub trait KeyWhere = Key + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
-pub type ListKeyObjects = Vec<Option<String>>;
+pub type ListKeyObjects = HashSet<Option<String>>;
 
 pub trait Storage {
     type Error;
