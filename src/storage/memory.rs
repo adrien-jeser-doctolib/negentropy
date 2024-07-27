@@ -73,11 +73,12 @@ impl Storage for Memory {
         PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString,
     {
-        let object = self.data.get(&key_with_parser.key().name()).unwrap();
-        key_with_parser
-            .parser()
-            .deserialize_value::<RETURN>(object)
-            .map_err(|err| todo!())
+        let object = self.data.get(&key_with_parser.key().name());
+
+        match object {
+            Some(object) => parse_memory_object(object, key_with_parser),
+            None => Err(MemoryError::NotExistsObject(key_with_parser.key().name())),
+        }
     }
 
     #[inline]
@@ -90,4 +91,27 @@ impl Storage for Memory {
             .take(1000)
             .collect())
     }
+}
+
+#[expect(clippy::single_call_fn, reason = "code readability")]
+fn parse_memory_object<RETURN, KEY, PARSER>(
+    content: &[u8],
+    key_with_parser: &KeyWithParser<KEY, PARSER>,
+) -> Result<RETURN, MemoryError>
+where
+    RETURN: DeserializeOwned + Send + Sync,
+    KEY: KeyWhere,
+    PARSER: ParserWhere,
+    <PARSER as Parser>::Error: ToString,
+{
+    let object = key_with_parser
+        .parser()
+        .deserialize_value::<RETURN>(content)
+        .map_err(|err| MemoryError::Serde {
+            operation: "parse_memory_object".to_owned(),
+            key: key_with_parser.key().name(),
+            internal: err.to_string(),
+        })?;
+
+    Ok(object)
 }

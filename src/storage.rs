@@ -123,4 +123,5 @@ pub enum MemoryError {
         key: String,
         internal: String,
     },
+    NotExistsObject(String),
 }
