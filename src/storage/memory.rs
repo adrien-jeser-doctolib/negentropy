@@ -87,6 +87,7 @@ impl Storage for Memory {
             .iter()
             .filter(|(key, _)| key.starts_with(prefix))
             .map(|(key, _)| Some(key.to_owned()))
+            .take(1000)
             .collect())
     }
 }
