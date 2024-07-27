@@ -1,7 +1,7 @@
 use gxhash::HashMap;
 use serde::de::DeserializeOwned;
 
-use super::{KeyWhere, MemoryError, ParserWhere, Storage};
+use super::{KeyWhere, ListKeyObjects, MemoryError, ParserWhere, Storage};
 use crate::{KeyWithParser, Parser};
 
 #[derive(Default)]
@@ -81,7 +81,7 @@ impl Storage for Memory {
     }
 
     #[inline]
-    async fn list_objects(&self, prefix: &str) -> Result<super::ListKeyObjects, Self::Error> {
+    async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
         Ok(self
             .data
             .iter()
