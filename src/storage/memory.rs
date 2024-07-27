@@ -75,10 +75,10 @@ impl Storage for Memory {
     {
         let object = self.data.get(&key_with_parser.key().name());
 
-        match object {
-            Some(object) => parse_memory_object(object, key_with_parser),
-            None => Err(MemoryError::NotExistsObject(key_with_parser.key().name())),
-        }
+        object.map_or_else(
+            || Err(MemoryError::NotExistsObject(key_with_parser.key().name())),
+            |content| parse_memory_object(content, key_with_parser),
+        )
     }
 
     #[inline]
@@ -86,7 +86,7 @@ impl Storage for Memory {
         Ok(self
             .data
             .iter()
-            .filter(|(key, _)| key.starts_with(prefix))
+            .filter(|&(key, _)| key.starts_with(prefix))
             .map(|(key, _)| Some(key.to_owned()))
             .take(1000)
             .collect())
