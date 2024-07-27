@@ -61,6 +61,9 @@ pub enum S3Error {
     EnvConfig(String),
 }
 
+#[derive(Debug)]
+pub struct MemoryError {}
+
 pub trait Key {
     fn name(&self) -> String;
 }

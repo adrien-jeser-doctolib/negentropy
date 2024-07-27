@@ -23,7 +23,7 @@ pub trait Storage {
 
     #[inline]
     fn put_object_if_not_exists<KEY, PARSER, VALUE>(
-        &self,
+        &mut self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, Self::Error>>
@@ -45,7 +45,7 @@ pub trait Storage {
     }
 
     fn put_object<VALUE, KEY, PARSER>(
-        &self,
+        &mut self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<&Self, Self::Error>>
@@ -56,7 +56,7 @@ pub trait Storage {
         <PARSER as Parser>::Error: ToString;
 
     fn put_bytes<KEY, PARSER>(
-        &self,
+        &mut self,
         value: Vec<u8>,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send

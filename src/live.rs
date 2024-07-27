@@ -27,7 +27,7 @@ impl Default for Welcome {
 }
 
 #[inline]
-pub async fn welcome(s3: &S3) -> Result<Welcome, S3Error> {
+pub async fn welcome(s3: &mut S3) -> Result<Welcome, S3Error> {
     let welcome = Welcome::default();
     let key_with_parser = KeyWithParser::new(LiveKey::Welcome, Json);
     s3.put_object_if_not_exists(&key_with_parser, &welcome)

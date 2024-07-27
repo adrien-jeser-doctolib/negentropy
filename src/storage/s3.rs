@@ -65,7 +65,7 @@ impl Storage for S3 {
 
     #[inline]
     async fn put_object<VALUE, KEY, PARSER>(
-        &self,
+        &mut self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
@@ -89,7 +89,7 @@ impl Storage for S3 {
 
     #[inline]
     async fn put_bytes<KEY, PARSER>(
-        &self,
+        &mut self,
         value: Vec<u8>,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> Result<&Self, Self::Error>

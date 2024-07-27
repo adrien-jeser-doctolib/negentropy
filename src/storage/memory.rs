@@ -1,13 +1,15 @@
 use super::{KeyWhere, ParserWhere, Storage};
-use crate::KeyWithParser;
-use gxhash::{HashMap, HashMapExt};
+use crate::{KeyWithParser, MemoryError, Parser};
+use gxhash::HashMap;
+use serde::de::DeserializeOwned;
 
+#[derive(Default)]
 pub struct Memory {
     data: HashMap<String, Vec<u8>>,
 }
 
 impl Storage for Memory {
-    type Error = ();
+    type Error = MemoryError;
 
     async fn exists<KEY, PARSER>(
         &self,
@@ -21,7 +23,7 @@ impl Storage for Memory {
     }
 
     async fn put_object<VALUE, KEY, PARSER>(
-        &self,
+        &mut self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
@@ -29,7 +31,7 @@ impl Storage for Memory {
         VALUE: super::ValueWhere,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as crate::Parser>::Error: ToString,
+        <PARSER as Parser>::Error: ToString,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
 
@@ -40,7 +42,7 @@ impl Storage for Memory {
     }
 
     async fn put_bytes<KEY, PARSER>(
-        &self,
+        &mut self,
         value: Vec<u8>,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> Result<&Self, Self::Error>
@@ -48,8 +50,8 @@ impl Storage for Memory {
         KEY: KeyWhere,
         PARSER: ParserWhere,
     {
-        // self.data.insert(key_with_parser.key().name(), value);
-        Ok(&self)
+        self.data.insert(key_with_parser.key().name(), value);
+        Ok(self)
     }
 
     async fn get_object<RETURN, KEY, PARSER>(
@@ -57,18 +59,19 @@ impl Storage for Memory {
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> Result<RETURN, Self::Error>
     where
-        RETURN: serde::de::DeserializeOwned + Send + Sync,
+        RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as crate::Parser>::Error: ToString,
+        <PARSER as Parser>::Error: ToString,
     {
-        todo!()
+        let object = self.data.get(&key_with_parser.key().name()).unwrap();
+        key_with_parser
+            .parser()
+            .deserialize_value::<RETURN>(object)
+            .map_err(|err| MemoryError {})
     }
 
-    fn list_objects(
-        &self,
-        prefix: &str,
-    ) -> impl futures::Future<Output = Result<super::ListKeyObjects, Self::Error>> {
+    async fn list_objects(&self, prefix: &str) -> Result<super::ListKeyObjects, Self::Error> {
         todo!()
     }
 }
