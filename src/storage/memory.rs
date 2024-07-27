@@ -83,13 +83,28 @@ impl Storage for Memory {
 
     #[inline]
     async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        Ok(self
+        let prefix_len = prefix.len();
+        let objects = self
             .data
             .iter()
             .filter(|&(key, _)| key.starts_with(prefix))
-            .map(|(key, _)| Some(key.to_owned()))
-            .take(1000)
-            .collect())
+            .map(|(key, _)| {
+                let (_, radical) = key.split_at(prefix_len);
+                let radical_key = radical.split_once('/');
+
+                let key_without_suffix = match radical_key {
+                    None => key.to_owned(),
+                    Some((radical_without_suffix, _)) => {
+                        format!("{prefix}/{radical_without_suffix}/")
+                    }
+                };
+
+                Some(key_without_suffix)
+            })
+            .collect();
+
+        // TODO: Limit to 1000 keys
+        Ok(objects)
     }
 }
 
