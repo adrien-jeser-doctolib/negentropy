@@ -80,7 +80,10 @@ impl Storage for S3 {
         let serialize = key_with_parser.parser().serialize_value(value);
 
         match serialize {
-            Ok(res) => self.put_bytes(res, key_with_parser).await,
+            Ok(res) => {
+                self.put_bytes(res, key_with_parser.key(), key_with_parser.parser().mime())
+                    .await
+            }
             Err(err) => Err(S3Error::S3Object {
                 operation: "put_object".to_owned(),
                 key: key_with_parser.key().name(),
@@ -90,26 +93,26 @@ impl Storage for S3 {
     }
 
     #[inline]
-    async fn put_bytes<KEY, PARSER>(
+    async fn put_bytes<KEY>(
         &mut self,
         value: Vec<u8>,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key: &KEY,
+        mime: String,
     ) -> Result<&Self, Self::Error>
     where
         KEY: KeyWhere,
-        PARSER: ParserWhere,
     {
         self.inner
             .put_object()
             .bucket(&self.bucket)
-            .key(key_with_parser.key().name())
+            .key(key.name())
             .body(ByteStream::from(value))
-            .set_content_type(Some(key_with_parser.parser().mime()))
+            .set_content_type(Some(mime.to_owned()))
             .send()
             .await
             .map_err(|err| S3Error::S3Object {
                 operation: "put_bytes".to_owned(),
-                key: key_with_parser.key().name(),
+                key: key.name(),
                 internal: err.to_string(),
             })?;
 
@@ -171,7 +174,10 @@ impl Storage for S3 {
 fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Error> {
     list.contents
         .map_or(Err(S3Error::S3ListHandle), |contents| {
-            Ok(contents.into_iter().map(|content| content.key).collect())
+            Ok(contents
+                .into_iter()
+                .flat_map(|content| content.key)
+                .collect())
         })
 }
 

@@ -7,3 +7,7 @@ rustflags = [
   "-Z",
   "threads=8",
 ]
+
+[target.aarch64-apple-darwin]
+linker = "clang"
+rustflags = ["-Z", "threads=8", "-C", "target-cpu=native"]

@@ -12,7 +12,7 @@ use crate::{Key, KeyWithParser, Parser};
 pub trait KeyWhere = Key + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
-pub type ListKeyObjects = HashSet<Option<String>>;
+pub type ListKeyObjects = HashSet<String>;
 
 pub trait Storage {
     type Error;
@@ -59,14 +59,14 @@ pub trait Storage {
         PARSER: ParserWhere,
         <PARSER as Parser>::Error: ToString + Send;
 
-    fn put_bytes<KEY, PARSER>(
+    fn put_bytes<KEY>(
         &mut self,
         value: Vec<u8>,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key: &KEY,
+        mime: String,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
-        KEY: KeyWhere,
-        PARSER: ParserWhere;
+        KEY: KeyWhere;
 
     fn get_object<RETURN, KEY, PARSER>(
         &self,

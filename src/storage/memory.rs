@@ -9,6 +9,24 @@ pub struct Memory {
     data: HashMap<String, Vec<u8>>,
 }
 
+impl Memory {
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    pub async fn get_bytes<KEY>(&mut self, key: &KEY) -> Result<&Vec<u8>, MemoryError>
+    where
+        KEY: KeyWhere,
+    {
+        let object = self.data.get(&key.name());
+        object.ok_or_else(|| MemoryError::NotExistsObject(key.name()))
+    }
+}
+
 impl Storage for Memory {
     type Error = MemoryError;
 
@@ -39,7 +57,10 @@ impl Storage for Memory {
         let serialize = key_with_parser.parser().serialize_value(value);
 
         match serialize {
-            Ok(res) => self.put_bytes(res, key_with_parser).await,
+            Ok(res) => {
+                self.put_bytes(res, key_with_parser.key(), key_with_parser.parser().mime())
+                    .await
+            }
             Err(err) => Err(MemoryError::Serde {
                 operation: "put_object".to_owned(),
                 key: key_with_parser.key().name(),
@@ -49,16 +70,16 @@ impl Storage for Memory {
     }
 
     #[inline]
-    async fn put_bytes<KEY, PARSER>(
+    async fn put_bytes<KEY>(
         &mut self,
         value: Vec<u8>,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key: &KEY,
+        _mime: String,
     ) -> Result<&Self, Self::Error>
     where
         KEY: KeyWhere,
-        PARSER: ParserWhere,
     {
-        self.data.insert(key_with_parser.key().name(), value);
+        self.data.insert(key.name(), value);
         Ok(self)
     }
 
@@ -88,18 +109,26 @@ impl Storage for Memory {
             .data
             .iter()
             .filter(|&(key, _)| key.starts_with(prefix))
-            .map(|(key, _)| {
+            .flat_map(|(key, _)| {
                 let (_, radical) = key.split_at(prefix_len);
                 let radical_key = radical.split_once('/');
 
-                let key_without_suffix = match radical_key {
-                    None => key.to_owned(),
+                match radical_key {
+                    None => Some(key.to_owned()),
                     Some((radical_without_suffix, _)) => {
-                        format!("{prefix}/{radical_without_suffix}/")
-                    }
-                };
+                        let (qux, _) = radical_without_suffix
+                            .split_once('/')
+                            .unwrap_or((radical_without_suffix, ""));
 
-                Some(key_without_suffix)
+                        if prefix.is_empty() {
+                            Some(format!("{qux}/"))
+                        } else if qux.is_empty() {
+                            None
+                        } else {
+                            Some(format!("{prefix}/{qux}/"))
+                        }
+                    }
+                }
             })
             .collect();
 
@@ -129,4 +158,171 @@ where
         })?;
 
     Ok(object)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Key;
+
+    enum TestKey {
+        One,
+        Long,
+        Long2,
+        VeryLong,
+        VeryLong2,
+    }
+
+    impl Key for TestKey {
+        fn name(&self) -> String {
+            match *self {
+                TestKey::One => "one".to_owned(),
+                TestKey::Long => "long/qux".to_owned(),
+                TestKey::Long2 => "long/baz".to_owned(),
+                TestKey::VeryLong => "long/verylong/buz".to_owned(),
+                TestKey::VeryLong2 => "long/verylong/tar".to_owned(),
+            }
+        }
+    }
+
+    #[test]
+    fn empty() {
+        let memory = Memory::default();
+        assert_eq!(memory.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn empty_bytes() {
+        let mut memory = Memory::default();
+        assert_eq!(memory.len(), 0);
+        memory
+            .put_bytes(vec![], &TestKey::One, String::new())
+            .await
+            .unwrap();
+        assert_eq!(memory.len(), 1);
+        assert_eq!(
+            memory.get_bytes(&TestKey::One).await.unwrap(),
+            &Vec::<u8>::new()
+        );
+    }
+
+    #[tokio::test]
+    async fn bytes() {
+        let mut memory = Memory::default();
+        assert_eq!(memory.len(), 0);
+        memory
+            .put_bytes(vec![42, 0, 9], &TestKey::One, String::new())
+            .await
+            .unwrap();
+        assert_eq!(memory.len(), 1);
+        assert_eq!(
+            memory.get_bytes(&TestKey::One).await.unwrap(),
+            &vec![42, 0, 9]
+        );
+    }
+
+    #[tokio::test]
+    async fn list_root() {
+        let mut memory = Memory::default();
+        assert_eq!(memory.len(), 0);
+        assert_eq!(
+            memory.list_objects("").await.unwrap(),
+            vec![].into_iter().collect()
+        );
+
+        memory
+            .put_bytes(vec![], &TestKey::One, String::new())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            memory.list_objects("").await.unwrap(),
+            vec!["one".to_string()].into_iter().collect(),
+            "must have only `one`"
+        );
+
+        memory
+            .put_bytes(vec![], &TestKey::Long, String::new())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            memory.list_objects("").await.unwrap(),
+            vec!["one".to_owned(), "long/".to_owned()]
+                .into_iter()
+                .collect(),
+            "`long/qux` must be split to `long/`"
+        );
+
+        memory
+            .put_bytes(vec![], &TestKey::Long2, String::new())
+            .await
+            .unwrap();
+        memory
+            .put_bytes(vec![], &TestKey::VeryLong, String::new())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            memory.list_objects("").await.unwrap(),
+            vec!["one".to_owned(), "long/".to_owned()]
+                .into_iter()
+                .collect()
+        );
+    }
+
+    #[tokio::test]
+    async fn list_with_prefix() {
+        let mut memory = Memory::default();
+        assert_eq!(memory.len(), 0);
+        assert_eq!(
+            memory.list_objects("long").await.unwrap(),
+            vec![].into_iter().collect()
+        );
+
+        memory
+            .put_bytes(vec![], &TestKey::One, String::new())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            memory.list_objects("long").await.unwrap(),
+            vec![].into_iter().collect()
+        );
+
+        assert_eq!(
+            memory.list_objects("long/").await.unwrap(),
+            vec![].into_iter().collect()
+        );
+
+        memory
+            .put_bytes(vec![], &TestKey::Long, String::new())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            memory.list_objects("long").await.unwrap(),
+            vec![].into_iter().collect()
+        );
+        assert_eq!(
+            memory.list_objects("long/").await.unwrap(),
+            vec!["long/qux".to_owned()].into_iter().collect()
+        );
+
+        memory
+            .put_bytes(vec![], &TestKey::Long2, String::new())
+            .await
+            .unwrap();
+        memory
+            .put_bytes(vec![], &TestKey::VeryLong, String::new())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            memory.list_objects("long/").await.unwrap(),
+            vec!["one".to_owned(), "long/".to_owned()]
+                .into_iter()
+                .collect()
+        );
+    }
 }
