@@ -7,7 +7,9 @@ use gxhash::HashSet;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::{Key, KeyWithParser, Parser};
+use crate::key_with_parser::KeyWithParser;
+use crate::parser::Parser;
+use crate::Key;
 
 pub trait KeyWhere = Key + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;

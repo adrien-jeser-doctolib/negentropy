@@ -1,6 +1,20 @@
 use serde::Serialize;
 
-use crate::Parser;
+use crate::storage::ValueWhere;
+
+pub trait Parser {
+    type Error;
+
+    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
+    where
+        VALUE: ValueWhere;
+
+    fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, Self::Error>
+    where
+        CONTENT: for<'content> serde::Deserialize<'content>;
+
+    fn mime(&self) -> String;
+}
 
 #[derive(Default)]
 pub struct Json;

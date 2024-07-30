@@ -21,60 +21,14 @@
 )]
 #![expect(clippy::exhaustive_structs, reason = "Accept breaking struct")]
 
+use key::Key;
 use serde::Serialize;
-use storage::ValueWhere;
 
+pub mod key;
+pub mod key_with_parser;
 pub mod live;
 pub mod parser;
 pub mod storage;
-
-pub trait Key {
-    fn name(&self) -> String;
-}
-
-pub trait Parser {
-    type Error;
-
-    fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, Self::Error>
-    where
-        VALUE: ValueWhere;
-
-    fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, Self::Error>
-    where
-        CONTENT: for<'content> serde::Deserialize<'content>;
-
-    fn mime(&self) -> String;
-}
-
-pub struct KeyWithParser<KEY, PARSER>
-where
-    KEY: Key,
-    PARSER: Parser,
-{
-    key: KEY,
-    parser: PARSER,
-}
-
-impl<KEY, PARSER> KeyWithParser<KEY, PARSER>
-where
-    KEY: Key,
-    PARSER: Parser,
-{
-    #[inline]
-    pub const fn new(key: KEY, parser: PARSER) -> Self {
-        Self { key, parser }
-    }
-
-    #[inline]
-    pub const fn key(&self) -> &KEY {
-        &self.key
-    }
-
-    #[inline]
-    pub const fn parser(&self) -> &PARSER {
-        &self.parser
-    }
-}
 
 #[derive(Debug, Clone, Serialize)]
 pub enum LiveKey {

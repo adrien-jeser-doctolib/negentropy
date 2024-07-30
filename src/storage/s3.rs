@@ -11,8 +11,9 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
 use super::S3Error;
+use crate::key_with_parser::KeyWithParser;
+use crate::parser::Parser;
 use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, Storage, ValueWhere};
-use crate::{KeyWithParser, Parser};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
