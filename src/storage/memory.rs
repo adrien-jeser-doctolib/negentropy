@@ -123,9 +123,7 @@ impl Storage for Memory {
                 match radical_key {
                     None => Some(key.to_owned()),
                     Some((radical_without_suffix, _)) => {
-                        if prefix.is_empty() {
-                            Some(format!("{radical_without_suffix}{delimiter}"))
-                        } else if radical_without_suffix.is_empty() {
+                        if radical_without_suffix.is_empty() {
                             None
                         } else {
                             Some(format!("{prefix}{radical_without_suffix}{delimiter}"))
