@@ -10,15 +10,20 @@ pub struct Memory {
 }
 
 impl Memory {
+    #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.data.len()
     }
 
+    #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
 
-    pub async fn get_bytes<KEY>(&mut self, key: &KEY) -> Result<&Vec<u8>, MemoryError>
+    #[inline]
+    pub fn get_bytes<KEY>(&mut self, key: &KEY) -> Result<&Vec<u8>, MemoryError>
     where
         KEY: KeyWhere,
     {
@@ -104,28 +109,25 @@ impl Storage for Memory {
 
     #[inline]
     async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
+        let delimiter = '/';
         let prefix_len = prefix.len();
         let objects = self
             .data
             .iter()
             .filter(|&(key, _)| key.starts_with(prefix))
-            .flat_map(|(key, _)| {
+            .filter_map(|(key, _)| {
                 let (_, radical) = key.split_at(prefix_len);
-                let radical_key = radical.split_once('/');
+                let radical_key = radical.split_once(delimiter);
 
                 match radical_key {
                     None => Some(key.to_owned()),
                     Some((radical_without_suffix, _)) => {
-                        let (qux, _) = radical_without_suffix
-                            .split_once('/')
-                            .unwrap_or((radical_without_suffix, ""));
-
                         if prefix.is_empty() {
-                            Some(format!("{qux}/"))
-                        } else if qux.is_empty() {
+                            Some(format!("{radical_without_suffix}{delimiter}"))
+                        } else if radical_without_suffix.is_empty() {
                             None
                         } else {
-                            Some(format!("{prefix}/{qux}/"))
+                            Some(format!("{prefix}{radical_without_suffix}{delimiter}"))
                         }
                     }
                 }
@@ -170,7 +172,6 @@ mod tests {
         Long,
         Long2,
         VeryLong,
-        VeryLong2,
     }
 
     impl Key for TestKey {
@@ -180,7 +181,6 @@ mod tests {
                 TestKey::Long => "long/qux".to_owned(),
                 TestKey::Long2 => "long/baz".to_owned(),
                 TestKey::VeryLong => "long/verylong/buz".to_owned(),
-                TestKey::VeryLong2 => "long/verylong/tar".to_owned(),
             }
         }
     }
@@ -200,10 +200,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(memory.len(), 1);
-        assert_eq!(
-            memory.get_bytes(&TestKey::One).await.unwrap(),
-            &Vec::<u8>::new()
-        );
+        assert_eq!(memory.get_bytes(&TestKey::One).unwrap(), &Vec::<u8>::new());
     }
 
     #[tokio::test]
@@ -215,10 +212,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(memory.len(), 1);
-        assert_eq!(
-            memory.get_bytes(&TestKey::One).await.unwrap(),
-            &vec![42, 0, 9]
-        );
+        assert_eq!(memory.get_bytes(&TestKey::One).unwrap(), &vec![42, 0, 9]);
     }
 
     #[tokio::test]
@@ -320,9 +314,13 @@ mod tests {
 
         assert_eq!(
             memory.list_objects("long/").await.unwrap(),
-            vec!["one".to_owned(), "long/".to_owned()]
-                .into_iter()
-                .collect()
+            vec![
+                "long/baz".to_owned(),
+                "long/qux".to_owned(),
+                "long/verylong/".to_owned()
+            ]
+            .into_iter()
+            .collect()
         );
     }
 }

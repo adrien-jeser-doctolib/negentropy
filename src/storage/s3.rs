@@ -107,7 +107,7 @@ impl Storage for S3 {
             .bucket(&self.bucket)
             .key(key.name())
             .body(ByteStream::from(value))
-            .set_content_type(Some(mime.to_owned()))
+            .set_content_type(Some(mime.clone()))
             .send()
             .await
             .map_err(|err| S3Error::S3Object {
@@ -176,7 +176,7 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Er
         .map_or(Err(S3Error::S3ListHandle), |contents| {
             Ok(contents
                 .into_iter()
-                .flat_map(|content| content.key)
+                .filter_map(|content| content.key)
                 .collect())
         })
 }
