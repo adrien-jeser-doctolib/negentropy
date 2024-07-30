@@ -322,5 +322,10 @@ mod tests {
             .into_iter()
             .collect()
         );
+
+        assert_eq!(
+            memory.list_objects("long/verylong/").await.unwrap(),
+            vec!["long/verylong/buz".to_owned()].into_iter().collect()
+        );
     }
 }
