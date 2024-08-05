@@ -1,22 +1,22 @@
 use super::parser::Parser;
 use crate::Key;
 
-pub struct KeyWithParser<KEY, PARSER>
+pub struct KeyWithParser<'a, KEY, PARSER>
 where
     KEY: Key,
     PARSER: Parser,
 {
-    key: KEY,
-    parser: PARSER,
+    key: &'a KEY,
+    parser: &'a PARSER,
 }
 
-impl<KEY, PARSER> KeyWithParser<KEY, PARSER>
+impl<'a, KEY, PARSER> KeyWithParser<'a, KEY, PARSER>
 where
     KEY: Key,
     PARSER: Parser,
 {
     #[inline]
-    pub const fn new(key: KEY, parser: PARSER) -> Self {
+    pub const fn new(key: &'a KEY, parser: &'a PARSER) -> Self {
         Self { key, parser }
     }
 

@@ -36,7 +36,7 @@ impl Storage for S3 {
     #[inline]
     async fn exists<KEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
         KEY: KeyWhere,
@@ -68,7 +68,7 @@ impl Storage for S3 {
     #[inline]
     async fn put_object<VALUE, KEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
     where
@@ -122,7 +122,7 @@ impl Storage for S3 {
     #[inline]
     async fn get_object<RETURN, KEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
     ) -> Result<RETURN, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
@@ -184,7 +184,7 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Er
 #[expect(clippy::single_call_fn, reason = "code readability")]
 async fn parse_s3_object<RETURN, KEY, PARSER>(
     object: GetObjectOutput,
-    key_with_parser: &KeyWithParser<KEY, PARSER>,
+    key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
 ) -> Result<RETURN, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,

@@ -43,7 +43,7 @@ impl Storage for Memory {
     #[inline]
     async fn exists<KEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
         KEY: KeyWhere,
@@ -55,7 +55,7 @@ impl Storage for Memory {
     #[inline]
     async fn put_object<VALUE, KEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
     where
@@ -96,7 +96,7 @@ impl Storage for Memory {
     #[inline]
     async fn get_object<RETURN, KEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
     ) -> Result<RETURN, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,

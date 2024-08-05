@@ -129,7 +129,7 @@ where
 
     async fn welcome(mut self) -> Result<Self, STORAGE::Error> {
         let welcome = Welcome::default();
-        let key_with_parser = KeyWithParser::new(InstanceKey::Welcome, Json);
+        let key_with_parser = KeyWithParser::new(&InstanceKey::Welcome, &Json);
         self.storage
             .put_object_if_not_exists(&key_with_parser, &welcome)
             .await?;
@@ -138,8 +138,8 @@ where
 
     async fn initialize(mut self) -> Result<Self, STORAGE::Error> {
         let initialize = Initialize;
-        let key_with_parser =
-            KeyWithParser::new(InstanceKey::Initialize(self.instance_id.to_string()), Json);
+        let key = &InstanceKey::Initialize(self.instance_id.to_string());
+        let key_with_parser = KeyWithParser::new(key, &Json);
         self.storage
             .put_object_if_not_exists(&key_with_parser, &initialize)
             .await?;
@@ -148,7 +148,7 @@ where
 
     pub async fn put_object<KEY, VALUE>(
         &mut self,
-        key: KEY,
+        key: &KEY,
         value: &VALUE,
     ) -> Result<&Self, STORAGE::Error>
     where
@@ -157,7 +157,7 @@ where
         <STORAGE as Storage>::Error: std::fmt::Debug,
     {
         self.storage
-            .put_object_if_not_exists(&KeyWithParser::new(key, Json), value)
+            .put_object_if_not_exists(&KeyWithParser::new(key, &Json), value)
             .await
             .unwrap();
 
@@ -174,7 +174,7 @@ mod tests {
     async fn welcome() {
         let memory = Memory::default();
         let instance = Instance::new(memory, Uuid::new_v4()).await.unwrap();
-        let key_with_parser = KeyWithParser::new(InstanceKey::Welcome, Json);
+        let key_with_parser = KeyWithParser::new(&InstanceKey::Welcome, &Json);
         instance
             .storage
             .get_object::<Welcome, _, _>(&key_with_parser)
