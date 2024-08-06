@@ -28,12 +28,11 @@ impl Memory {
     }
 
     #[inline]
-    pub fn get_bytes<KEY>(&mut self, key: &KEY) -> Result<&Vec<u8>, MemoryError>
+    pub fn get_bytes<KEY>(&mut self, key: &KEY) -> Option<&Vec<u8>>
     where
         KEY: KeyWhere,
     {
-        let object = self.data.get(&key.name());
-        object.ok_or_else(|| MemoryError::NotExistsObject(key.name()))
+        self.data.get(&key.name())
     }
 }
 
@@ -97,7 +96,7 @@ impl Storage for Memory {
     async fn get_object<RETURN, KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
-    ) -> Result<RETURN, Self::Error>
+    ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
@@ -107,7 +106,7 @@ impl Storage for Memory {
         let object = self.data.get(&key_with_parser.key().name());
 
         object.map_or_else(
-            || Err(MemoryError::NotExistsObject(key_with_parser.key().name())),
+            || Ok(None),
             |content| parse_memory_object(content, key_with_parser),
         )
     }

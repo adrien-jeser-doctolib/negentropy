@@ -79,7 +79,7 @@ pub trait Storage {
     fn get_object<RETURN, KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<KEY, PARSER>,
-    ) -> impl Future<Output = Result<RETURN, Self::Error>> + Send
+    ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
@@ -144,7 +144,6 @@ pub enum MemoryError {
         key: String,
         internal: String,
     },
-    NotExistsObject(String),
 }
 
 impl fmt::Display for MemoryError {
@@ -163,7 +162,6 @@ impl fmt::Display for MemoryError {
                 f,
                 "Can not serde the {key} key on {operation} operation. {internal}"
             ),
-            MemoryError::NotExistsObject(object_name) => write!(f, "{object_name} doesn't exists"),
         }
     }
 }

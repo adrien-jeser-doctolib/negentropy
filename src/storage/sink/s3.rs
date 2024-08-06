@@ -123,7 +123,7 @@ impl Storage for S3 {
     async fn get_object<RETURN, KEY, PARSER>(
         &self,
         key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
-    ) -> Result<RETURN, Self::Error>
+    ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
@@ -185,7 +185,7 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Er
 async fn parse_s3_object<RETURN, KEY, PARSER>(
     object: GetObjectOutput,
     key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
-) -> Result<RETURN, S3Error>
+) -> Result<Option<RETURN>, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
     KEY: KeyWhere,
@@ -193,7 +193,7 @@ where
     <PARSER as Parser>::Error: ToString,
 {
     if object.content_length().unwrap_or_default() == 0 {
-        Err(S3Error::NotExistsObject(key_with_parser.key().name()))
+        Ok(None)
     } else {
         let try_decoding = object.body.collect().await;
 
