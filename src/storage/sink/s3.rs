@@ -3,7 +3,7 @@ use std::env;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::error::SdkError;
-use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
@@ -140,6 +140,11 @@ impl Storage for S3 {
 
         match object {
             Ok(object_output) => parse_s3_object(object_output, key_with_parser).await,
+            Err(SdkError::ServiceError(err))
+                if matches!(err.err(), &GetObjectError::NoSuchKey(_)) =>
+            {
+                Ok(None)
+            }
             Err(err) => Err(S3Error::S3Object {
                 operation: "get_object".to_owned(),
                 key: key_with_parser.key().name(),
