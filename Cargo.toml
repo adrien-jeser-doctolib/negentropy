@@ -4,8 +4,8 @@ version = "0.1.0+taxus-baccata"
 edition = "2021"
 
 [dependencies]
-aws-config = { version = "1.5.4", default-features = false }
-aws-sdk-s3 = { version = "1.41.0", default-features = false }
+aws-config = { version = "1.5.4" }
+aws-sdk-s3 = { version = "1.41.0" }
 directories = "5.0.1"
 futures = "0.3.30"
 gxhash = { version = "3.4.1", optional = true }
