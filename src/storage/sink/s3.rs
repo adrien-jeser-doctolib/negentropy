@@ -235,7 +235,10 @@ where
 async fn create_client() -> Result<Client, S3Error> {
     let sdk_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let config = Builder::from(&sdk_config)
-        .endpoint_url(env::var("S3_ENDPOINT").map_err(|err| S3Error::EnvConfig(err.to_string()))?)
+        .endpoint_url(
+            env::var("S3_ENDPOINT")
+                .map_err(|err| S3Error::EnvConfig(format!("S3_ENDPOINT {err}")))?,
+        )
         .region(Region::new(
             env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_owned()),
         ))
