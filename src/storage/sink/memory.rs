@@ -1,13 +1,11 @@
-#[cfg(not(feature = "prod"))]
-use std::collections::HashMap;
-
-#[cfg(feature = "prod")]
-use gxhash::HashMap;
 use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::parser::Parser;
-use crate::storage::{KeyWhere, ListKeyObjects, MemoryError, ParserWhere, Storage, ValueWhere};
+use crate::storage::{
+    KeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Sink, ValueWhere,
+};
+use crate::HashMap;
 
 #[derive(Default)]
 pub struct Memory {
@@ -36,7 +34,7 @@ impl Memory {
     }
 }
 
-impl Storage for Memory {
+impl Sink for Memory {
     type Error = MemoryError;
 
     #[inline]
@@ -61,7 +59,6 @@ impl Storage for Memory {
         VALUE: ValueWhere,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString + Send,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
 
@@ -70,11 +67,14 @@ impl Storage for Memory {
                 self.put_bytes(res, key_with_parser.key(), key_with_parser.parser().mime())
                     .await
             }
-            Err(err) => Err(MemoryError::Serde {
-                operation: "put_object".to_owned(),
-                key: key_with_parser.key().name(),
-                internal: err.to_string(),
-            }),
+            Err(err) => {
+                let memory_error = MemoryError::from(ParserError::Serde {
+                    operation: "put_object".to_owned(),
+                    key: key_with_parser.key().name(),
+                    internal: err.to_string(),
+                });
+                Err(memory_error)
+            }
         }
     }
 
@@ -101,14 +101,14 @@ impl Storage for Memory {
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString,
     {
         let object = self.data.get(&key_with_parser.key().name());
-
-        object.map_or_else(
+        let value = object.map_or_else(
             || Ok(None),
-            |content| parse_memory_object(content, key_with_parser),
-        )
+            |content| key_with_parser.parser().deserialize_value(content),
+        )?;
+
+        Ok(value)
     }
 
     #[inline]
@@ -139,29 +139,6 @@ impl Storage for Memory {
         // TODO: Limit to 1000 keys
         Ok(objects)
     }
-}
-
-#[expect(clippy::single_call_fn, reason = "code readability")]
-fn parse_memory_object<RETURN, KEY, PARSER>(
-    content: &[u8],
-    key_with_parser: &KeyWithParser<KEY, PARSER>,
-) -> Result<RETURN, MemoryError>
-where
-    RETURN: DeserializeOwned + Send + Sync,
-    KEY: KeyWhere,
-    PARSER: ParserWhere,
-    <PARSER as Parser>::Error: ToString,
-{
-    let object = key_with_parser
-        .parser()
-        .deserialize_value::<RETURN>(content)
-        .map_err(|err| MemoryError::Serde {
-            operation: "parse_memory_object".to_owned(),
-            key: key_with_parser.key().name(),
-            internal: err.to_string(),
-        })?;
-
-    Ok(object)
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ use crate::storage::key::Key;
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::parser::Json;
 use crate::storage::sink::memory::Memory;
-use crate::storage::{MemoryError, Storage, ValueWhere};
+use crate::storage::{MemoryError, Sink, ValueWhere};
 use crate::InstanceKey;
 
 #[derive(Serialize, Deserialize)]
@@ -107,18 +107,18 @@ impl Builder {
     }
 }
 
-pub struct Instance<STORAGE: Storage + Send + Sync> {
-    storage: STORAGE,
+pub struct Instance<SINK: Sink + Send + Sync> {
+    storage: SINK,
     instance_id: Uuid,
 }
 
-impl<STORAGE> Instance<STORAGE>
+impl<SINK> Instance<SINK>
 where
-    STORAGE: Storage + Send + Sync,
-    <STORAGE as Storage>::Error: Send + Sync,
+    SINK: Sink + Send + Sync,
+    <SINK as Sink>::Error: Send + Sync,
 {
     #[inline]
-    pub async fn new(storage: STORAGE, instance_id: Uuid) -> Result<Self, STORAGE::Error> {
+    pub async fn new(storage: SINK, instance_id: Uuid) -> Result<Self, SINK::Error> {
         let instance = Self {
             storage,
             instance_id,
@@ -127,7 +127,7 @@ where
         instance.welcome().await?.initialize().await
     }
 
-    async fn welcome(mut self) -> Result<Self, STORAGE::Error> {
+    async fn welcome(mut self) -> Result<Self, SINK::Error> {
         let welcome = Welcome::default();
         let key_with_parser = KeyWithParser::new(&InstanceKey::Welcome, &Json);
         self.storage
@@ -136,7 +136,7 @@ where
         Ok(self)
     }
 
-    async fn initialize(mut self) -> Result<Self, STORAGE::Error> {
+    async fn initialize(mut self) -> Result<Self, SINK::Error> {
         let initialize = Initialize;
         let key = &InstanceKey::Initialize(self.instance_id.to_string());
         let key_with_parser = KeyWithParser::new(key, &Json);
@@ -150,11 +150,11 @@ where
         &mut self,
         key: &KEY,
         value: &VALUE,
-    ) -> Result<&Self, STORAGE::Error>
+    ) -> Result<&Self, SINK::Error>
     where
         KEY: Key + Send + Sync,
         VALUE: ValueWhere,
-        <STORAGE as Storage>::Error: std::fmt::Debug,
+        <SINK as Sink>::Error: std::fmt::Debug,
     {
         self.storage
             .put_object_if_not_exists(&KeyWithParser::new(key, &Json), value)

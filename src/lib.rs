@@ -27,6 +27,12 @@ use storage::key::Key;
 pub mod instance;
 pub mod storage;
 
+#[cfg(not(feature = "prod"))]
+pub use std::collections::{HashMap, HashSet};
+
+#[cfg(feature = "prod")]
+pub use gxhash::{HashMap, HashSet};
+
 #[derive(Debug, Clone, Serialize)]
 pub enum InstanceKey {
     Welcome,

@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod key;
 pub mod key_with_parser;
 pub mod parser;
@@ -6,23 +7,21 @@ pub mod sink;
 use core::error::Error;
 use core::fmt;
 use core::future::Future;
-#[cfg(not(feature = "prod"))]
-use std::collections::HashSet;
 
-#[cfg(feature = "prod")]
-use gxhash::HashMap;
 use key::Key;
 use key_with_parser::KeyWithParser;
 use parser::Parser;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use crate::HashSet;
+
 pub trait KeyWhere = Key + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
 pub type ListKeyObjects = HashSet<String>;
 
-pub trait Storage {
+pub trait Sink {
     type Error;
 
     fn exists<KEY, PARSER>(
@@ -42,7 +41,6 @@ pub trait Storage {
     where
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString + Send,
         VALUE: ValueWhere,
         Self: Send,
     {
@@ -64,8 +62,7 @@ pub trait Storage {
     where
         VALUE: ValueWhere,
         KEY: KeyWhere,
-        PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString + Send;
+        PARSER: ParserWhere;
 
     fn put_bytes<KEY>(
         &mut self,
@@ -83,8 +80,7 @@ pub trait Storage {
     where
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
-        PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString;
+        PARSER: ParserWhere;
 
     fn list_objects(
         &self,
@@ -124,6 +120,73 @@ pub enum S3Error {
     EnvConfig(String),
 }
 
+pub trait Middleware {
+    type Error;
+
+    fn exists<KEY, PARSER>(
+        &self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> impl Future<Output = Result<bool, Self::Error>> + Send
+    where
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
+
+    #[inline]
+    fn put_object_if_not_exists<KEY, PARSER, VALUE>(
+        &mut self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        value: &VALUE,
+    ) -> impl Future<Output = Result<bool, Self::Error>> + Send
+    where
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
+        VALUE: ValueWhere,
+        Self: Send,
+    {
+        async {
+            if self.exists(key_with_parser).await? {
+                Ok(false)
+            } else {
+                self.put_object(key_with_parser, value).await?;
+                Ok(true)
+            }
+        }
+    }
+
+    fn put_object<VALUE, KEY, PARSER>(
+        &mut self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        value: &VALUE,
+    ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
+    where
+        VALUE: ValueWhere,
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
+
+    fn put_bytes<KEY>(
+        &mut self,
+        value: Vec<u8>,
+        key: &KEY,
+        mime: String,
+    ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
+    where
+        KEY: KeyWhere;
+
+    fn get_object<RETURN, KEY, PARSER>(
+        &mut self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
+    where
+        RETURN: DeserializeOwned + Send + Sync,
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
+
+    fn list_objects(
+        &mut self,
+        prefix: &str,
+    ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
+}
+
 impl fmt::Display for S3Error {
     #[inline]
     #[expect(
@@ -139,11 +202,7 @@ impl Error for S3Error {}
 
 #[derive(Debug)]
 pub enum MemoryError {
-    Serde {
-        operation: String,
-        key: String,
-        internal: String,
-    },
+    Serde(ParserError),
 }
 
 impl fmt::Display for MemoryError {
@@ -154,7 +213,37 @@ impl fmt::Display for MemoryError {
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MemoryError::Serde {
+            MemoryError::Serde(err) => write!(f, "ParseMemory: {err}"),
+        }
+    }
+}
+
+impl From<ParserError> for MemoryError {
+    fn from(value: ParserError) -> Self {
+        Self::Serde(value)
+    }
+}
+
+impl Error for MemoryError {}
+
+#[derive(Debug)]
+pub enum ParserError {
+    Serde {
+        operation: String,
+        key: String,
+        internal: String,
+    },
+}
+
+impl fmt::Display for ParserError {
+    #[inline]
+    #[expect(
+        clippy::min_ident_chars,
+        reason = "conflict with clippy::renamed_function_params lint"
+    )]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Serde {
                 operation,
                 key,
                 internal,
@@ -166,4 +255,4 @@ impl fmt::Display for MemoryError {
     }
 }
 
-impl Error for MemoryError {}
+impl Error for ParserError {}

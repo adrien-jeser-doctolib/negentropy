@@ -11,8 +11,7 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
-use crate::storage::parser::Parser;
-use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, S3Error, Storage, ValueWhere};
+use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, S3Error, Sink, ValueWhere};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -30,7 +29,7 @@ impl S3 {
     }
 }
 
-impl Storage for S3 {
+impl Sink for S3 {
     type Error = S3Error;
 
     #[inline]
@@ -75,7 +74,6 @@ impl Storage for S3 {
         VALUE: ValueWhere,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString + Send,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
 
@@ -128,7 +126,6 @@ impl Storage for S3 {
         RETURN: DeserializeOwned + Send + Sync,
         KEY: KeyWhere,
         PARSER: ParserWhere,
-        <PARSER as Parser>::Error: ToString,
     {
         let object = self
             .inner
@@ -195,7 +192,6 @@ where
     RETURN: DeserializeOwned + Send + Sync,
     KEY: KeyWhere,
     PARSER: ParserWhere,
-    <PARSER as Parser>::Error: ToString,
 {
     if object.content_length().unwrap_or_default() == 0 {
         Ok(None)
@@ -222,7 +218,6 @@ where
     RETURN: DeserializeOwned + Send + Sync,
     KEY: KeyWhere,
     PARSER: ParserWhere,
-    <PARSER as Parser>::Error: ToString,
 {
     let object = key_with_parser
         .parser()
