@@ -29,6 +29,7 @@ where
 impl<MIDDLEWARE> Middleware for Lru<MIDDLEWARE>
 where
     MIDDLEWARE: Middleware + Send + Sync,
+    MemoryError: From<<MIDDLEWARE as Middleware>::Error>,
 {
     type Error = MemoryError;
 
@@ -70,7 +71,7 @@ where
     where
         KEY: KeyWhere,
     {
-        self.storage.put_bytes(value.clone(), key, mime).await;
+        self.storage.put_bytes(value.clone(), key, mime).await?;
         self.cache.put(key.name(), value);
         self.exists.insert(key.name());
         Ok(self)

@@ -1,7 +1,6 @@
 use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
-use crate::storage::parser::Parser;
 use crate::storage::{
     KeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Sink, ValueWhere,
 };
@@ -69,8 +68,6 @@ impl Sink for Memory {
             }
             Err(err) => {
                 let memory_error = MemoryError::from(ParserError::Serde {
-                    operation: "put_object".to_owned(),
-                    key: key_with_parser.key().name(),
                     internal: err.to_string(),
                 });
                 Err(memory_error)

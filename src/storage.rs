@@ -228,11 +228,7 @@ impl Error for MemoryError {}
 
 #[derive(Debug)]
 pub enum ParserError {
-    Serde {
-        operation: String,
-        key: String,
-        internal: String,
-    },
+    Serde { internal: String },
 }
 
 impl fmt::Display for ParserError {
@@ -243,14 +239,7 @@ impl fmt::Display for ParserError {
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Serde {
-                operation,
-                key,
-                internal,
-            } => write!(
-                f,
-                "Can not serde the {key} key on {operation} operation. {internal}"
-            ),
+            Self::Serde { internal } => write!(f, "Can not serde : {internal}"),
         }
     }
 }

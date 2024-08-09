@@ -25,9 +25,7 @@ impl Parser for Json {
         VALUE: Serialize + Send,
     {
         serde_json::to_vec(value).map_err(|err| ParserError::Serde {
-            operation: "serialize_value".to_owned(),
-            key: todo!(),
-            internal: todo!(),
+            internal: err.to_string(),
         })
     }
 
@@ -37,9 +35,7 @@ impl Parser for Json {
         RETURN: for<'content> serde::Deserialize<'content>,
     {
         serde_json::from_slice(content).map_err(|err| ParserError::Serde {
-            operation: "serialize_value".to_owned(),
-            key: todo!(),
-            internal: todo!(),
+            internal: err.to_string(),
         })
     }
 
