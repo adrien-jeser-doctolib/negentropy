@@ -88,6 +88,25 @@ pub trait Sink {
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
 }
 
+fn object_radix(key: &String, prefix: &str) -> Option<String> {
+    let delimiter = '/';
+    let prefix_len = prefix.len();
+
+    let (_, radical) = key.split_at(prefix_len);
+    let radical_key = radical.split_once(delimiter);
+
+    match radical_key {
+        None => Some(key.to_owned()),
+        Some((radical_without_suffix, _)) => {
+            if radical_without_suffix.is_empty() {
+                None
+            } else {
+                Some(format!("{prefix}{radical_without_suffix}{delimiter}"))
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum S3Error {
     Serde(ParserError),

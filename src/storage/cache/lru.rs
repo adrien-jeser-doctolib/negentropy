@@ -4,7 +4,9 @@ use lru::LruCache;
 use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
-use crate::storage::{KeyWhere, ListKeyObjects, MemoryError, Middleware, ParserWhere, ValueWhere};
+use crate::storage::{
+    object_radix, KeyWhere, ListKeyObjects, MemoryError, Middleware, ParserWhere, ValueWhere,
+};
 use crate::HashSet;
 
 pub struct Lru<MIDDLEWARE> {
@@ -54,10 +56,11 @@ where
         KEY: KeyWhere,
         PARSER: ParserWhere,
     {
-        // self.storage
-        //     .put_object(value.clone(), key_with_parser)
-        //     .await;
-        // self.cache.put(key_with_parser.key().name(), value);
+        self.storage.put_object(key_with_parser, value).await?;
+        self.cache.put(
+            key_with_parser.key().name(),
+            key_with_parser.parser().serialize_value(value)?,
+        );
         self.exists.insert(key_with_parser.key().name());
         Ok(self)
     }
@@ -95,6 +98,13 @@ where
     }
 
     async fn list_objects(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        todo!()
+        let objects = self
+            .exists
+            .iter()
+            .filter(|&key| key.starts_with(prefix))
+            .filter_map(|key| object_radix(key, prefix))
+            .collect();
+
+        Ok(objects)
     }
 }
