@@ -221,12 +221,7 @@ where
 {
     let object = key_with_parser
         .parser()
-        .deserialize_value::<RETURN>(&content.to_vec())
-        .map_err(|err| S3Error::Serde {
-            operation: "parse_aggregated_bytes".to_owned(),
-            key: key_with_parser.key().name(),
-            internal: err.to_string(),
-        })?;
+        .deserialize_value::<RETURN>(&content.to_vec())?;
 
     Ok(object)
 }

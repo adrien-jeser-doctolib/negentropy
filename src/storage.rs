@@ -90,11 +90,7 @@ pub trait Sink {
 
 #[derive(Debug)]
 pub enum S3Error {
-    Serde {
-        operation: String,
-        key: String,
-        internal: String,
-    },
+    Serde(ParserError),
     S3Bucket {
         operation: String,
         bucket: String,
@@ -199,6 +195,12 @@ impl fmt::Display for S3Error {
 }
 
 impl Error for S3Error {}
+
+impl From<ParserError> for S3Error {
+    fn from(value: ParserError) -> Self {
+        Self::Serde(value)
+    }
+}
 
 #[derive(Debug)]
 pub enum MemoryError {
