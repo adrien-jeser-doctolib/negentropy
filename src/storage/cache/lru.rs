@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::{
-    radix_key, Cache, KeyWhere, ListKeyObjects, MemoryError, ParserWhere, Sink, ValueWhere,
+    radix_key, Cache, KeyWhere, ListKeyObjects, LruError, ParserWhere, Sink, ValueWhere,
 };
 use crate::HashSet;
 
@@ -31,9 +31,9 @@ where
 impl<STORAGE> Cache for Lru<STORAGE>
 where
     STORAGE: Sink + Send + Sync,
-    MemoryError: From<<STORAGE as Sink>::Error>,
+    LruError: From<<STORAGE as Sink>::Error>,
 {
-    type Error = MemoryError;
+    type Error = LruError;
 
     async fn exists<KEY, PARSER>(
         &self,

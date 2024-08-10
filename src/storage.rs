@@ -248,6 +248,38 @@ impl fmt::Display for ParserError {
 
 impl Error for ParserError {}
 
+#[derive(Debug)]
+pub enum LruError {
+    S3(S3Error),
+    Parser(ParserError),
+}
+
+impl fmt::Display for LruError {
+    #[inline]
+    #[expect(
+        clippy::min_ident_chars,
+        reason = "conflict with clippy::renamed_function_params lint"
+    )]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LruError::S3(err) => write!(f, "LruError: {err}"),
+            LruError::Parser(err) => write!(f, "ParserError: {err}"),
+        }
+    }
+}
+
+impl From<S3Error> for LruError {
+    fn from(value: S3Error) -> Self {
+        Self::S3(value)
+    }
+}
+
+impl From<ParserError> for LruError {
+    fn from(value: ParserError) -> Self {
+        Self::Parser(value)
+    }
+}
+
 fn radix_key(prefix: &str, key: &String) -> Option<String> {
     let delimiter = '/';
     let prefix_len = prefix.len();
