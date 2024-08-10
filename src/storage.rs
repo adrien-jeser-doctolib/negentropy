@@ -21,7 +21,7 @@ pub trait ParserWhere = Parser + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
 pub type ListKeyObjects = HashSet<String>;
 
-pub trait Storage {
+pub trait Sink {
     type Error;
 
     fn exists<KEY, PARSER>(
@@ -88,6 +88,73 @@ pub trait Storage {
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
 }
 
+pub trait Cache {
+    type Error;
+
+    fn exists<KEY, PARSER>(
+        &self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> impl Future<Output = Result<bool, Self::Error>> + Send
+    where
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
+
+    #[inline]
+    fn put_object_if_not_exists<KEY, PARSER, VALUE>(
+        &mut self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        value: &VALUE,
+    ) -> impl Future<Output = Result<bool, Self::Error>> + Send
+    where
+        KEY: KeyWhere,
+        PARSER: ParserWhere,
+        VALUE: ValueWhere,
+        Self: Send,
+    {
+        async {
+            if self.exists(key_with_parser).await? {
+                Ok(false)
+            } else {
+                self.put_object(key_with_parser, value).await?;
+                Ok(true)
+            }
+        }
+    }
+
+    fn put_object<VALUE, KEY, PARSER>(
+        &mut self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        value: &VALUE,
+    ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
+    where
+        VALUE: ValueWhere,
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
+
+    fn put_bytes<KEY>(
+        &mut self,
+        value: Vec<u8>,
+        key: &KEY,
+        mime: String,
+    ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
+    where
+        KEY: KeyWhere;
+
+    fn get_object<RETURN, KEY, PARSER>(
+        &mut self,
+        key_with_parser: &KeyWithParser<KEY, PARSER>,
+    ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
+    where
+        RETURN: DeserializeOwned + Send + Sync,
+        KEY: KeyWhere,
+        PARSER: ParserWhere;
+
+    fn list_objects(
+        &mut self,
+        prefix: &str,
+    ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
+}
+
 #[derive(Debug)]
 pub enum S3Error {
     Serde(ParserError),
@@ -116,7 +183,7 @@ pub enum S3Error {
     EnvConfig(String),
 }
 
-pub trait Middleware {
+pub trait Storage {
     type Error;
 
     fn exists<KEY, PARSER>(
@@ -247,3 +314,21 @@ impl fmt::Display for ParserError {
 }
 
 impl Error for ParserError {}
+
+fn radix_key(prefix: &str, key: &String) -> Option<String> {
+    let delimiter = '/';
+    let prefix_len = prefix.len();
+    let (_, radical) = key.split_at(prefix_len);
+    let radical_key = radical.split_once(delimiter);
+
+    match radical_key {
+        None => Some(key.to_owned()),
+        Some((radical_without_suffix, _)) => {
+            if radical_without_suffix.is_empty() {
+                None
+            } else {
+                Some(format!("{prefix}{radical_without_suffix}{delimiter}"))
+            }
+        }
+    }
+}

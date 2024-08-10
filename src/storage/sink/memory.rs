@@ -2,7 +2,7 @@ use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::{
-    KeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Storage, ValueWhere,
+    radix_key, KeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Sink, ValueWhere,
 };
 use crate::HashMap;
 
@@ -33,7 +33,7 @@ impl Memory {
     }
 }
 
-impl Storage for Memory {
+impl Sink for Memory {
     type Error = MemoryError;
 
     #[inline]
@@ -110,27 +110,11 @@ impl Storage for Memory {
 
     #[inline]
     async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        let delimiter = '/';
-        let prefix_len = prefix.len();
         let objects = self
             .data
             .iter()
             .filter(|&(key, _)| key.starts_with(prefix))
-            .filter_map(|(key, _)| {
-                let (_, radical) = key.split_at(prefix_len);
-                let radical_key = radical.split_once(delimiter);
-
-                match radical_key {
-                    None => Some(key.to_owned()),
-                    Some((radical_without_suffix, _)) => {
-                        if radical_without_suffix.is_empty() {
-                            None
-                        } else {
-                            Some(format!("{prefix}{radical_without_suffix}{delimiter}"))
-                        }
-                    }
-                }
-            })
+            .filter_map(|(key, _)| radix_key(prefix, key))
             .collect();
 
         // TODO: Limit to 1000 keys

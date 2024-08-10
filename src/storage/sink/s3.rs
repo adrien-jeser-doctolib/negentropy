@@ -11,7 +11,7 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
-use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, S3Error, Storage, ValueWhere};
+use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, S3Error, Sink, ValueWhere};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -29,7 +29,7 @@ impl S3 {
     }
 }
 
-impl Storage for S3 {
+impl Sink for S3 {
     type Error = S3Error;
 
     #[inline]

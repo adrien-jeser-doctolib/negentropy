@@ -4,20 +4,22 @@ use lru::LruCache;
 use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
-use crate::storage::{KeyWhere, ListKeyObjects, MemoryError, Middleware, ParserWhere, ValueWhere};
+use crate::storage::{
+    radix_key, Cache, KeyWhere, ListKeyObjects, MemoryError, ParserWhere, ValueWhere,
+};
 use crate::HashSet;
 
-pub struct Lru<MIDDLEWARE> {
+pub struct Lru<STORAGE> {
     exists: HashSet<String>,
     cache: LruCache<String, Vec<u8>>,
-    storage: MIDDLEWARE,
+    storage: STORAGE,
 }
 
-impl<MIDDLEWARE> Lru<MIDDLEWARE>
+impl<STORAGE> Lru<STORAGE>
 where
-    MIDDLEWARE: Middleware + Send + Sync,
+    STORAGE: Cache + Send + Sync,
 {
-    pub fn new(size: NonZeroUsize, storage: MIDDLEWARE) -> Self {
+    pub fn new(size: NonZeroUsize, storage: STORAGE) -> Self {
         Self {
             exists: HashSet::new(),
             cache: LruCache::new(size),
@@ -26,10 +28,10 @@ where
     }
 }
 
-impl<MIDDLEWARE> Middleware for Lru<MIDDLEWARE>
+impl<CACHE> Cache for Lru<CACHE>
 where
-    MIDDLEWARE: Middleware + Send + Sync,
-    MemoryError: From<<MIDDLEWARE as Middleware>::Error>,
+    CACHE: Cache + Send + Sync,
+    MemoryError: From<<CACHE as Cache>::Error>,
 {
     type Error = MemoryError;
 
@@ -54,10 +56,9 @@ where
         KEY: KeyWhere,
         PARSER: ParserWhere,
     {
-        // self.storage
-        //     .put_object(value.clone(), key_with_parser)
-        //     .await;
-        // self.cache.put(key_with_parser.key().name(), value);
+        self.storage.put_object(key_with_parser, value).await?;
+        let serialize = key_with_parser.parser().serialize_value(value)?;
+        self.cache.put(key_with_parser.key().name(), serialize);
         self.exists.insert(key_with_parser.key().name());
         Ok(self)
     }
@@ -95,6 +96,11 @@ where
     }
 
     async fn list_objects(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        todo!()
+        Ok(self
+            .cache
+            .iter()
+            .filter(|&(key, _)| key.starts_with(prefix))
+            .filter_map(|(key, _)| radix_key(prefix, key))
+            .collect())
     }
 }
