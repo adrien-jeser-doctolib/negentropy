@@ -10,7 +10,7 @@ use crate::storage::key::Key;
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::parser::Json;
 use crate::storage::sink::memory::Memory;
-use crate::storage::{MemoryError, Sink, ValueWhere};
+use crate::storage::{MemoryError, Storage, ValueWhere};
 use crate::InstanceKey;
 
 #[derive(Serialize, Deserialize)]
@@ -107,15 +107,15 @@ impl Builder {
     }
 }
 
-pub struct Instance<SINK: Sink + Send + Sync> {
+pub struct Instance<SINK: Storage + Send + Sync> {
     storage: SINK,
     instance_id: Uuid,
 }
 
 impl<SINK> Instance<SINK>
 where
-    SINK: Sink + Send + Sync,
-    <SINK as Sink>::Error: Send + Sync,
+    SINK: Storage + Send + Sync,
+    <SINK as Storage>::Error: Send + Sync,
 {
     #[inline]
     pub async fn new(storage: SINK, instance_id: Uuid) -> Result<Self, SINK::Error> {
@@ -154,7 +154,7 @@ where
     where
         KEY: Key + Send + Sync,
         VALUE: ValueWhere,
-        <SINK as Sink>::Error: std::fmt::Debug,
+        <SINK as Storage>::Error: std::fmt::Debug,
     {
         self.storage
             .put_object_if_not_exists(&KeyWithParser::new(key, &Json), value)
