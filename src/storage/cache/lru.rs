@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::{
-    radix_key, Cache, KeyWhere, ListKeyObjects, MemoryError, ParserWhere, ValueWhere,
+    radix_key, Cache, KeyWhere, ListKeyObjects, MemoryError, ParserWhere, Sink, ValueWhere,
 };
 use crate::HashSet;
 
@@ -17,7 +17,7 @@ pub struct Lru<STORAGE> {
 
 impl<STORAGE> Lru<STORAGE>
 where
-    STORAGE: Cache + Send + Sync,
+    STORAGE: Sink + Send + Sync,
 {
     pub fn new(size: NonZeroUsize, storage: STORAGE) -> Self {
         Self {
@@ -28,10 +28,10 @@ where
     }
 }
 
-impl<CACHE> Cache for Lru<CACHE>
+impl<STORAGE> Cache for Lru<STORAGE>
 where
-    CACHE: Cache + Send + Sync,
-    MemoryError: From<<CACHE as Cache>::Error>,
+    STORAGE: Sink + Send + Sync,
+    MemoryError: From<<STORAGE as Sink>::Error>,
 {
     type Error = MemoryError;
 
