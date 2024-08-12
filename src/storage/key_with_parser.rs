@@ -22,11 +22,11 @@ where
 
     #[inline]
     pub const fn key(&self) -> &KEY {
-        &self.key
+        self.key
     }
 
     #[inline]
     pub const fn parser(&self) -> &PARSER {
-        &self.parser
+        self.parser
     }
 }

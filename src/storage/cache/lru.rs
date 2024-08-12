@@ -112,4 +112,12 @@ where
             .filter_map(|(key, _)| radix_key(prefix, key))
             .collect())
     }
+
+    async fn get_bytes<KEY>(&mut self, key: &KEY) -> Result<Option<Vec<u8>>, Self::Error>
+    where
+        KEY: KeyWhere,
+    {
+        let bytes = self.cache.get(&key.name()).cloned();
+        Ok(bytes)
+    }
 }

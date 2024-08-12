@@ -7,6 +7,7 @@ pub mod sink;
 use core::error::Error;
 use core::fmt;
 use core::future::Future;
+use std::hash::Hash;
 
 use key::Key;
 use key_with_parser::KeyWithParser;
@@ -149,10 +150,27 @@ pub trait Cache {
         KEY: KeyWhere,
         PARSER: ParserWhere;
 
+    fn get_bytes<KEY>(
+        &mut self,
+        key: &KEY,
+    ) -> impl Future<Output = Result<Option<Vec<u8>>, Self::Error>> + Send
+    where
+        KEY: KeyWhere;
+
     fn list_objects(
         &mut self,
         prefix: &str,
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
+}
+
+pub trait WarmUp<CACHE: Cache> {
+    fn fetch<KEY, PARSER>(
+        &mut self,
+        key_with_parser: KeyWithParser<'_, KEY, PARSER>,
+    ) -> impl Future<Output = Result<(), CACHE::Error>>
+    where
+        KEY: KeyWhere + Hash + Eq + Serialize + DeserializeOwned,
+        PARSER: ParserWhere;
 }
 
 #[derive(Debug)]
