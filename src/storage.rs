@@ -145,7 +145,7 @@ pub trait Cache {
         key_with_parser: &KeyWithParser<KEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
-        RETURN: DeserializeOwned + Send + Sync,
+        RETURN: DeserializeOwned + Send + Sync + Serialize,
         KEY: KeyWhere,
         PARSER: ParserWhere;
 

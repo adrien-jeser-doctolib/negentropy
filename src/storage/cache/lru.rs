@@ -2,6 +2,7 @@ use std::num::NonZeroUsize;
 
 use lru::LruCache;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::storage::key_with_parser::KeyWithParser;
 use crate::storage::{
@@ -83,16 +84,24 @@ where
         key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
-        RETURN: DeserializeOwned + Send + Sync,
+        RETURN: DeserializeOwned + Send + Sync + Serialize,
         KEY: KeyWhere,
         PARSER: ParserWhere,
     {
-        let value = self
-            .cache
-            .get(&key_with_parser.key().name())
-            .map(|value| key_with_parser.parser().deserialize_value(value))
-            .transpose()?;
-        Ok(value)
+        let exists = self.exists(key_with_parser).await?;
+
+        if exists {
+            let value = self
+                .cache
+                .get(&key_with_parser.key().name())
+                .map(|value| key_with_parser.parser().deserialize_value(value))
+                .transpose()?;
+            Ok(value)
+        } else {
+            let object = self.storage.get_object(key_with_parser).await?;
+            self.put_object(key_with_parser, &object).await?;
+            Ok(object)
+        }
     }
 
     async fn list_objects(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
