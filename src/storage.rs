@@ -163,16 +163,6 @@ pub trait Cache {
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
 }
 
-pub trait WarmUp<CACHE: Cache> {
-    fn fetch<KEY, PARSER>(
-        &mut self,
-        key_with_parser: KeyWithParser<'_, KEY, PARSER>,
-    ) -> impl Future<Output = Result<(), CACHE::Error>>
-    where
-        KEY: KeyWhere + Hash + Eq + Serialize + DeserializeOwned,
-        PARSER: ParserWhere;
-}
-
 #[derive(Debug)]
 pub enum S3Error {
     Serde(ParserError),
