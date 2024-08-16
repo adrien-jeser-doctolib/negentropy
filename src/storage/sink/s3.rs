@@ -54,9 +54,9 @@ impl S3 {
 
     async fn put_bytes_inner(
         &mut self,
-        value: Vec<u8>,
         key: String,
         mime: String,
+        value: Vec<u8>,
     ) -> Result<(), S3Error> {
         self.inner
             .put_object()
@@ -108,7 +108,7 @@ impl S3 {
         let serialize = f(value);
 
         match serialize {
-            Ok(res) => self.put_bytes_inner(res, key, mime).await,
+            Ok(res) => self.put_bytes_inner(key, mime, res).await,
             Err(err) => Err(S3Error::S3Object {
                 operation: "put_object".to_owned(),
                 key,
@@ -188,14 +188,14 @@ impl SinkCopy for S3 {
     #[inline]
     async fn put_bytes_copy<DKEY>(
         &mut self,
-        value: Vec<u8>,
         key: &DKEY,
         mime: String,
+        value: Vec<u8>,
     ) -> Result<(), Self::Error>
     where
         DKEY: DKeyWhere,
     {
-        self.put_bytes_inner(value, key.name(), mime).await
+        self.put_bytes_inner(key.name(), mime, value).await
     }
 
     #[inline]

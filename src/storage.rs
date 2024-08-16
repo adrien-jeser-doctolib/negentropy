@@ -64,9 +64,9 @@ pub trait SinkCopy {
 
     fn put_bytes_copy<DKEY>(
         &mut self,
-        value: Vec<u8>,
         key: &DKEY,
         mime: String,
+        value: Vec<u8>,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send
     where
         DKEY: DKeyWhere;
@@ -131,9 +131,9 @@ pub trait CacheCopy {
 
     fn put_bytes<DKEY>(
         &mut self,
-        value: Vec<u8>,
         key: &DKEY,
         mime: String,
+        value: Vec<u8>,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
         DKEY: DKeyWhere;

@@ -1,6 +1,5 @@
 use core::num::NonZeroUsize;
 
-use futures::Future;
 use lru::LruCache;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -129,9 +128,9 @@ where
             .await?;
         self.storage
             .put_bytes_copy(
-                serialize,
                 key_with_parser.key(),
                 key_with_parser.parser().mime(),
+                serialize,
             )
             .await?;
         Ok(self)
@@ -140,15 +139,15 @@ where
     #[inline]
     async fn put_bytes<DKEY>(
         &mut self,
-        value: Vec<u8>,
         key: &DKEY,
         mime: String,
+        value: Vec<u8>,
     ) -> Result<&Self, Self::Error>
     where
         DKEY: DKeyWhere,
     {
         self.put_bytes_inner(key.name(), value.clone())?;
-        self.storage.put_bytes_copy(value, key, mime).await?;
+        self.storage.put_bytes_copy(key, mime, value).await?;
         Ok(self)
     }
 

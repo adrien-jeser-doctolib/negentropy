@@ -125,9 +125,9 @@ impl SinkCopy for Memory {
     #[inline]
     async fn put_bytes_copy<DKEY>(
         &mut self,
-        value: Vec<u8>,
         key: &DKEY,
         _mime: String,
+        value: Vec<u8>,
     ) -> Result<(), Self::Error>
     where
         DKEY: DKeyWhere,
@@ -190,7 +190,7 @@ mod tests {
         let mut memory = Memory::default();
         assert_eq!(memory.len(), 0);
         memory
-            .put_bytes_copy(vec![], &TestKey::One, String::new())
+            .put_bytes_copy(&TestKey::One, String::new(), vec![])
             .await
             .unwrap();
         assert_eq!(memory.len(), 1);
@@ -202,7 +202,7 @@ mod tests {
         let mut memory = Memory::default();
         assert_eq!(memory.len(), 0);
         memory
-            .put_bytes_copy(vec![42, 0, 9], &TestKey::One, String::new())
+            .put_bytes_copy(&TestKey::One, String::new(), vec![42, 0, 9])
             .await
             .unwrap();
         assert_eq!(memory.len(), 1);
@@ -219,7 +219,7 @@ mod tests {
         );
 
         memory
-            .put_bytes_copy(vec![], &TestKey::One, String::new())
+            .put_bytes_copy(&TestKey::One, String::new(), vec![])
             .await
             .unwrap();
 
@@ -230,7 +230,7 @@ mod tests {
         );
 
         memory
-            .put_bytes_copy(vec![], &TestKey::Long, String::new())
+            .put_bytes_copy(&TestKey::Long, String::new(), vec![])
             .await
             .unwrap();
 
@@ -243,11 +243,11 @@ mod tests {
         );
 
         memory
-            .put_bytes_copy(vec![], &TestKey::Long2, String::new())
+            .put_bytes_copy(&TestKey::Long2, String::new(), vec![])
             .await
             .unwrap();
         memory
-            .put_bytes_copy(vec![], &TestKey::VeryLong, String::new())
+            .put_bytes_copy(&TestKey::VeryLong, String::new(), vec![])
             .await
             .unwrap();
 
@@ -269,7 +269,7 @@ mod tests {
         );
 
         memory
-            .put_bytes_copy(vec![], &TestKey::One, String::new())
+            .put_bytes_copy(&TestKey::One, String::new(), vec![])
             .await
             .unwrap();
 
@@ -284,7 +284,7 @@ mod tests {
         );
 
         memory
-            .put_bytes_copy(vec![], &TestKey::Long, String::new())
+            .put_bytes_copy(&TestKey::Long, String::new(), vec![])
             .await
             .unwrap();
 
@@ -298,11 +298,11 @@ mod tests {
         );
 
         memory
-            .put_bytes_copy(vec![], &TestKey::Long2, String::new())
+            .put_bytes_copy(&TestKey::Long2, String::new(), vec![])
             .await
             .unwrap();
         memory
-            .put_bytes_copy(vec![], &TestKey::VeryLong, String::new())
+            .put_bytes_copy(&TestKey::VeryLong, String::new(), vec![])
             .await
             .unwrap();
 
