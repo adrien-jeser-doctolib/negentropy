@@ -24,11 +24,13 @@ where
     }
 
     #[inline]
+    #[must_use]
     pub const fn key(&self) -> &DKEY {
         self.key
     }
 
     #[inline]
+    #[must_use]
     pub const fn parser(&self) -> &PARSER {
         self.parser
     }

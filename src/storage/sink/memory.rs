@@ -137,10 +137,10 @@ mod tests {
     impl DKey for TestKey {
         fn name(&self) -> String {
             match *self {
-                TestKey::One => "one".to_owned(),
-                TestKey::Long => "long/qux".to_owned(),
-                TestKey::Long2 => "long/baz".to_owned(),
-                TestKey::VeryLong => "long/verylong/buz".to_owned(),
+                Self::One => "one".to_owned(),
+                Self::Long => "long/qux".to_owned(),
+                Self::Long2 => "long/baz".to_owned(),
+                Self::VeryLong => "long/verylong/buz".to_owned(),
             }
         }
     }
@@ -191,7 +191,7 @@ mod tests {
 
         assert_eq!(
             memory.list_objects("").await.unwrap(),
-            vec!["one".to_string()].into_iter().collect(),
+            vec!["one".to_owned()].into_iter().collect(),
             "must have only `one`"
         );
 

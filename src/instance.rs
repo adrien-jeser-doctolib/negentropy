@@ -73,7 +73,7 @@ impl Builder {
     #[inline]
     #[must_use]
     pub fn load_from_env(self, prefix: &str) -> Self {
-        let key = format!("{}_NEGENTROPY_INSTANCE_ID", prefix);
+        let key = format!("{prefix}_NEGENTROPY_INSTANCE_ID");
         Self {
             instance_id: env::var(key).ok().or(self.instance_id),
         }
@@ -153,7 +153,7 @@ where
     where
         DKEY: DKey + Send + Sync,
         VALUE: ValueWhere,
-        <SINK as Sink>::Error: std::fmt::Debug,
+        <SINK as Sink>::Error: core::fmt::Debug,
     {
         self.storage
             .put_object_if_not_exists(&DKeyWithParser::new(key, &Json), value)

@@ -1,4 +1,4 @@
-use std::num::NonZeroUsize;
+use core::num::NonZeroUsize;
 
 use lru::LruCache;
 use serde::de::DeserializeOwned;

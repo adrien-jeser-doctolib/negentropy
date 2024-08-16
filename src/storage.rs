@@ -220,7 +220,7 @@ impl fmt::Display for MemoryError {
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MemoryError::Serde(err) => write!(f, "ParseMemory: {err}"),
+            Self::Serde(err) => write!(f, "ParseMemory: {err}"),
         }
     }
 }
@@ -267,8 +267,8 @@ impl fmt::Display for LruError {
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LruError::S3(err) => write!(f, "LruError: {err}"),
-            LruError::Parser(err) => write!(f, "ParserError: {err}"),
+            Self::S3(err) => write!(f, "LruError: {err}"),
+            Self::Parser(err) => write!(f, "ParserError: {err}"),
         }
     }
 }
