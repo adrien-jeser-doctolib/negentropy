@@ -258,6 +258,7 @@ impl Error for ParserError {}
 #[derive(Debug)]
 pub enum LruError {
     S3(S3Error),
+    Memory(MemoryError),
     Parser(ParserError),
 }
 
@@ -271,7 +272,15 @@ impl fmt::Display for LruError {
         match *self {
             Self::S3(ref err) => write!(f, "LruError: {err}"),
             Self::Parser(ref err) => write!(f, "ParserError: {err}"),
+            Self::Memory(ref err) => write!(f, "MemoryError: {err}"),
         }
+    }
+}
+
+impl From<MemoryError> for LruError {
+    #[inline]
+    fn from(value: MemoryError) -> Self {
+        Self::Memory(value)
     }
 }
 

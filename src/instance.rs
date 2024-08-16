@@ -9,8 +9,7 @@ use uuid::Uuid;
 
 use crate::storage::direct::{DKey, DKeyWithParser};
 use crate::storage::parser::Json;
-use crate::storage::sink::memory::Memory;
-use crate::storage::{MemoryError, Sink, ValueWhere};
+use crate::storage::{Cache, ValueWhere};
 use crate::InstanceKey;
 
 #[derive(Serialize, Deserialize)]
@@ -98,18 +97,18 @@ impl Builder {
     }
 }
 
-pub struct Instance<SINK: Sink + Send + Sync> {
-    storage: SINK,
+pub struct Instance<CACHE: Cache + Send + Sync> {
+    storage: CACHE,
     instance_id: Uuid,
 }
 
-impl<SINK> Instance<SINK>
+impl<CACHE> Instance<CACHE>
 where
-    SINK: Sink + Send + Sync,
-    <SINK as Sink>::Error: Send + Sync,
+    CACHE: Cache + Send + Sync,
+    <CACHE as Cache>::Error: Send + Sync,
 {
     #[inline]
-    pub async fn new(storage: SINK, instance_id: Uuid) -> Result<Self, SINK::Error> {
+    pub async fn new(storage: CACHE, instance_id: Uuid) -> Result<Self, CACHE::Error> {
         let instance = Self {
             storage,
             instance_id,
@@ -118,7 +117,7 @@ where
         instance.welcome().await?.initialize().await
     }
 
-    async fn welcome(mut self) -> Result<Self, SINK::Error> {
+    async fn welcome(mut self) -> Result<Self, CACHE::Error> {
         let welcome = Welcome::default();
         let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         self.storage
@@ -127,7 +126,7 @@ where
         Ok(self)
     }
 
-    async fn initialize(mut self) -> Result<Self, SINK::Error> {
+    async fn initialize(mut self) -> Result<Self, CACHE::Error> {
         let initialize = Initialize;
         let key = &InstanceKey::Initialize(self.instance_id.to_string());
         let key_with_parser = DKeyWithParser::new(key, &Json);
@@ -142,11 +141,11 @@ where
         &mut self,
         key: &DKEY,
         value: &VALUE,
-    ) -> Result<&Self, SINK::Error>
+    ) -> Result<&Self, CACHE::Error>
     where
         DKEY: DKey + Send + Sync,
         VALUE: ValueWhere,
-        <SINK as Sink>::Error: Debug,
+        <CACHE as Cache>::Error: Debug,
     {
         self.storage
             .put_object_if_not_exists(&DKeyWithParser::new(key, &Json), value)
@@ -158,13 +157,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroUsize;
+
     use super::*;
+    use crate::storage::cache::lru::Lru;
     use crate::storage::sink::memory::Memory;
 
     #[tokio::test]
     async fn welcome() {
         let memory = Memory::default();
-        let instance = Instance::new(memory, Uuid::new_v4()).await.unwrap();
+        let lru = Lru::new(NonZeroUsize::new(10).unwrap(), memory);
+        let mut instance = Instance::new(lru, Uuid::new_v4()).await.unwrap();
         let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         instance
             .storage
