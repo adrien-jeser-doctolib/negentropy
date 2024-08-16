@@ -27,6 +27,73 @@ impl S3 {
             bucket,
         })
     }
+
+    async fn exists_inner(&self, key: String) -> Result<bool, S3Error> {
+        let head_object = self
+            .inner
+            .head_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .send()
+            .await;
+
+        match head_object {
+            Ok(_) => Ok(true),
+            Err(SdkError::ServiceError(err))
+                if matches!(err.err(), &HeadObjectError::NotFound(_)) =>
+            {
+                Ok(false)
+            }
+            Err(err) => Err(S3Error::S3Exists {
+                operation: "exists".to_owned(),
+                key,
+                internal: err.to_string(),
+            }),
+        }
+    }
+
+    async fn put_bytes_inner(
+        &mut self,
+        value: Vec<u8>,
+        key: String,
+        mime: String,
+    ) -> Result<&Self, S3Error> {
+        self.inner
+            .put_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .body(ByteStream::from(value))
+            .set_content_type(Some(mime))
+            .send()
+            .await
+            .map_err(|err| S3Error::S3Object {
+                operation: "put_bytes".to_owned(),
+                key,
+                internal: err.to_string(),
+            })?;
+
+        Ok(self)
+    }
+
+    async fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, S3Error> {
+        let list = self
+            .inner
+            .list_objects_v2()
+            .bucket(&self.bucket)
+            .prefix(prefix)
+            .set_delimiter(Some("/".to_owned()))
+            .send()
+            .await;
+
+        match list {
+            Ok(list_output) => handle_list_objects(list_output),
+            Err(err) => Err(S3Error::S3List {
+                operation: "list_objects".to_owned(),
+                prefix: prefix.to_owned(),
+                internal: Some(err.to_string()),
+            }),
+        }
+    }
 }
 
 impl Sink for S3 {
@@ -41,27 +108,7 @@ impl Sink for S3 {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let head_object = self
-            .inner
-            .head_object()
-            .bucket(&self.bucket)
-            .key(key_with_parser.key().name())
-            .send()
-            .await;
-
-        match head_object {
-            Ok(_) => Ok(true),
-            Err(SdkError::ServiceError(err))
-                if matches!(err.err(), &HeadObjectError::NotFound(_)) =>
-            {
-                Ok(false)
-            }
-            Err(err) => Err(S3Error::S3Exists {
-                operation: "exists".to_owned(),
-                key: key_with_parser.key().name(),
-                internal: err.to_string(),
-            }),
-        }
+        self.exists_inner(key_with_parser.key().name()).await
     }
 
     #[inline]
@@ -100,21 +147,7 @@ impl Sink for S3 {
     where
         DKEY: DKeyWhere,
     {
-        self.inner
-            .put_object()
-            .bucket(&self.bucket)
-            .key(key.name())
-            .body(ByteStream::from(value))
-            .set_content_type(Some(mime.clone()))
-            .send()
-            .await
-            .map_err(|err| S3Error::S3Object {
-                operation: "put_bytes".to_owned(),
-                key: key.name(),
-                internal: err.to_string(),
-            })?;
-
-        Ok(self)
+        self.put_bytes_inner(value, key.name(), mime).await
     }
 
     #[inline]
@@ -152,23 +185,7 @@ impl Sink for S3 {
 
     #[inline]
     async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        let list = self
-            .inner
-            .list_objects_v2()
-            .bucket(&self.bucket)
-            .prefix(prefix)
-            .set_delimiter(Some("/".to_owned()))
-            .send()
-            .await;
-
-        match list {
-            Ok(list_output) => handle_list_objects(list_output),
-            Err(err) => Err(S3Error::S3List {
-                operation: "list_objects".to_owned(),
-                prefix: prefix.to_owned(),
-                internal: Some(err.to_string()),
-            }),
-        }
+        self.list_objects_inner(prefix).await
     }
 }
 
