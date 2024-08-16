@@ -37,7 +37,7 @@ impl Memory {
         Ok(self.data.contains_key(key))
     }
 
-    fn put_bytes_inner(&mut self, value: Vec<u8>, key: String) -> Result<(), MemoryError> {
+    fn put_bytes_inner(&mut self, key: String, value: Vec<u8>) -> Result<(), MemoryError> {
         self.data.insert(key, value);
         Ok(())
     }
@@ -66,7 +66,7 @@ impl Memory {
         let serialize = f(value);
 
         match serialize {
-            Ok(res) => self.put_bytes_inner(res, key),
+            Ok(res) => self.put_bytes_inner(key, res),
             Err(err) => {
                 let memory_error = MemoryError::from(ParserError::Serde {
                     internal: err.to_string(),
@@ -132,7 +132,7 @@ impl SinkCopy for Memory {
     where
         DKEY: DKeyWhere,
     {
-        self.put_bytes_inner(value, key.name())
+        self.put_bytes_inner(key.name(), value)
     }
 
     #[inline]

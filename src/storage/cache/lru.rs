@@ -1,5 +1,6 @@
 use core::num::NonZeroUsize;
 
+use futures::Future;
 use lru::LruCache;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -33,7 +34,7 @@ where
         Ok(self.exists.contains(key))
     }
 
-    fn put_bytes_inner(&mut self, value: Vec<u8>, key: String) -> Result<(), LruError> {
+    fn put_bytes_inner(&mut self, key: String, value: Vec<u8>) -> Result<(), LruError> {
         self.cache.put(key.clone(), value);
         self.exists.insert(key);
         Ok(())
@@ -52,6 +53,42 @@ where
             .filter(|&(key, _)| key.starts_with(prefix))
             .filter_map(|(key, _)| radix_key(prefix, key))
             .collect())
+    }
+
+    fn get_object_inner<RETURN, PARSER>(
+        &mut self,
+        key: String,
+        f: PARSER,
+    ) -> Result<Option<RETURN>, LruError>
+    where
+        RETURN: DeserializeOwned + Send + Sync + Serialize,
+        PARSER: Fn(&[u8]) -> Result<RETURN, LruError>,
+    {
+        let exists = self.exists_inner(&key)?;
+
+        if exists {
+            let value = self.cache.get(&key).map(|value| f(value)).transpose()?;
+            Ok(value)
+        } else {
+            // let object = self.storage.get_object_copy(key_with_parser).await?;
+            // self.put_object(key_with_parser, &object).await?;
+            // Ok(object)
+            todo!()
+        }
+    }
+
+    async fn put_object_inner<VALUE, PARSER>(
+        &mut self,
+        key: String,
+        value: &VALUE,
+        parser: PARSER,
+    ) -> Result<Vec<u8>, LruError>
+    where
+        PARSER: Fn(&VALUE) -> Result<Vec<u8>, LruError>,
+    {
+        let serialize = parser(value)?;
+        self.put_bytes_inner(key, serialize.clone())?;
+        Ok(serialize)
     }
 }
 
@@ -85,9 +122,18 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let serialize = key_with_parser.parser().serialize_value(value)?;
-        self.put_bytes_inner(serialize, key_with_parser.key().name())?;
-        self.storage.put_object_copy(key_with_parser, value).await?;
+        let serialize = self
+            .put_object_inner(key_with_parser.key().name(), value, |value| {
+                Ok(key_with_parser.parser().serialize_value(value)?)
+            })
+            .await?;
+        self.storage
+            .put_bytes_copy(
+                serialize,
+                key_with_parser.key(),
+                key_with_parser.parser().mime(),
+            )
+            .await?;
         Ok(self)
     }
 
@@ -101,7 +147,7 @@ where
     where
         DKEY: DKeyWhere,
     {
-        self.put_bytes_inner(value.clone(), key.name())?;
+        self.put_bytes_inner(key.name(), value.clone())?;
         self.storage.put_bytes_copy(value, key, mime).await?;
         Ok(self)
     }
