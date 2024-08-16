@@ -99,7 +99,7 @@ impl Builder {
 
 pub struct Instance<CACHE: Cache + Send + Sync> {
     storage: CACHE,
-    instance_id: Uuid,
+    builder: Builder,
 }
 
 impl<CACHE> Instance<CACHE>
@@ -108,11 +108,8 @@ where
     <CACHE as Cache>::Error: Send + Sync,
 {
     #[inline]
-    pub async fn new(storage: CACHE, instance_id: Uuid) -> Result<Self, CACHE::Error> {
-        let instance = Self {
-            storage,
-            instance_id,
-        };
+    pub async fn new(storage: CACHE, builder: Builder) -> Result<Self, CACHE::Error> {
+        let instance = Self { storage, builder };
 
         instance.welcome().await?.initialize().await
     }
@@ -128,7 +125,8 @@ where
 
     async fn initialize(mut self) -> Result<Self, CACHE::Error> {
         let initialize = Initialize;
-        let key = &InstanceKey::Initialize(self.instance_id.to_string());
+        let key =
+            &InstanceKey::Initialize(self.builder.instance_id.unwrap_or_default().to_string());
         let key_with_parser = DKeyWithParser::new(key, &Json);
         self.storage
             .put_object_if_not_exists(&key_with_parser, &initialize)
@@ -167,7 +165,8 @@ mod tests {
     async fn welcome() {
         let memory = Memory::default();
         let lru = Lru::new(NonZeroUsize::new(10).unwrap(), memory);
-        let mut instance = Instance::new(lru, Uuid::new_v4()).await.unwrap();
+        let builder = Builder::default();
+        let mut instance = Instance::new(lru, builder).await.unwrap();
         let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         instance
             .storage
