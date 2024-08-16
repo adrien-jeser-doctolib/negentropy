@@ -56,7 +56,7 @@ pub trait SinkCopy {
         &mut self,
         key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
-    ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send
     where
         VALUE: ValueWhere,
         DKEY: DKeyWhere,
@@ -67,7 +67,7 @@ pub trait SinkCopy {
         value: Vec<u8>,
         key: &DKEY,
         mime: String,
-    ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send
     where
         DKEY: DKeyWhere;
 
@@ -86,7 +86,7 @@ pub trait SinkCopy {
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
 }
 
-pub trait Cache {
+pub trait CacheCopy {
     type Error;
 
     fn exists<DKEY, PARSER>(

@@ -57,7 +57,7 @@ impl S3 {
         value: Vec<u8>,
         key: String,
         mime: String,
-    ) -> Result<&Self, S3Error> {
+    ) -> Result<(), S3Error> {
         self.inner
             .put_object()
             .bucket(&self.bucket)
@@ -72,7 +72,7 @@ impl S3 {
                 internal: err.to_string(),
             })?;
 
-        Ok(self)
+        Ok(())
     }
 
     async fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, S3Error> {
@@ -101,7 +101,7 @@ impl S3 {
         mime: String,
         value: &VALUE,
         f: F,
-    ) -> Result<&Self, S3Error>
+    ) -> Result<(), S3Error>
     where
         F: Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
     {
@@ -170,7 +170,7 @@ impl SinkCopy for S3 {
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
-    ) -> Result<&Self, Self::Error>
+    ) -> Result<(), Self::Error>
     where
         VALUE: ValueWhere,
         DKEY: DKeyWhere,
@@ -191,7 +191,7 @@ impl SinkCopy for S3 {
         value: Vec<u8>,
         key: &DKEY,
         mime: String,
-    ) -> Result<&Self, Self::Error>
+    ) -> Result<(), Self::Error>
     where
         DKEY: DKeyWhere,
     {

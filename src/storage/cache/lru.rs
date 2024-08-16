@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::storage::direct::DKeyWithParser;
 use crate::storage::{
-    radix_key, Cache, DKeyWhere, ListKeyObjects, LruError, ParserWhere, SinkCopy, ValueWhere,
+    radix_key, CacheCopy, DKeyWhere, ListKeyObjects, LruError, ParserWhere, SinkCopy, ValueWhere,
 };
 use crate::HashSet;
 
@@ -28,9 +28,34 @@ where
             storage,
         }
     }
+
+    fn exists_inner(&self, key: &str) -> Result<bool, LruError> {
+        Ok(self.exists.contains(key))
+    }
+
+    fn put_bytes_inner(&mut self, value: Vec<u8>, key: String) -> Result<(), LruError> {
+        self.cache.put(key.clone(), value);
+        self.exists.insert(key);
+        Ok(())
+    }
+
+    fn get_bytes_inner(&mut self, key: &str) -> Result<Option<Vec<u8>>, LruError> {
+        // TODO: Get from sink
+        let bytes = self.cache.get(key).cloned();
+        Ok(bytes)
+    }
+
+    fn list_objects_inner(&mut self, prefix: &str) -> Result<ListKeyObjects, LruError> {
+        Ok(self
+            .cache
+            .iter()
+            .filter(|&(key, _)| key.starts_with(prefix))
+            .filter_map(|(key, _)| radix_key(prefix, key))
+            .collect())
+    }
 }
 
-impl<STORAGE> Cache for Lru<STORAGE>
+impl<STORAGE> CacheCopy for Lru<STORAGE>
 where
     STORAGE: SinkCopy + Send + Sync,
     LruError: From<<STORAGE as SinkCopy>::Error>,
@@ -46,7 +71,7 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        Ok(self.exists.contains(&key_with_parser.key().name()))
+        self.exists_inner(&key_with_parser.key().name())
     }
 
     #[inline]
@@ -60,10 +85,9 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        self.storage.put_object_copy(key_with_parser, value).await?;
         let serialize = key_with_parser.parser().serialize_value(value)?;
-        self.cache.put(key_with_parser.key().name(), serialize);
-        self.exists.insert(key_with_parser.key().name());
+        self.put_bytes_inner(serialize, key_with_parser.key().name())?;
+        self.storage.put_object_copy(key_with_parser, value).await?;
         Ok(self)
     }
 
@@ -77,11 +101,8 @@ where
     where
         DKEY: DKeyWhere,
     {
-        self.storage
-            .put_bytes_copy(value.clone(), key, mime)
-            .await?;
-        self.cache.put(key.name(), value);
-        self.exists.insert(key.name());
+        self.put_bytes_inner(value.clone(), key.name())?;
+        self.storage.put_bytes_copy(value, key, mime).await?;
         Ok(self)
     }
 
@@ -113,12 +134,7 @@ where
 
     #[inline]
     async fn list_objects(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        Ok(self
-            .cache
-            .iter()
-            .filter(|&(key, _)| key.starts_with(prefix))
-            .filter_map(|(key, _)| radix_key(prefix, key))
-            .collect())
+        self.list_objects_inner(prefix)
     }
 
     #[inline]
@@ -126,8 +142,6 @@ where
     where
         DKEY: DKeyWhere,
     {
-        // TODO: Get from sink
-        let bytes = self.cache.get(&key.name()).cloned();
-        Ok(bytes)
+        self.get_bytes_inner(key.name().as_str())
     }
 }

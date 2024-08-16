@@ -33,16 +33,16 @@ impl Memory {
         self.data.get(&key.name())
     }
 
-    async fn exists_inner(&self, key: &str) -> Result<bool, MemoryError> {
+    fn exists_inner(&self, key: &str) -> Result<bool, MemoryError> {
         Ok(self.data.contains_key(key))
     }
 
-    async fn put_bytes_inner(&mut self, value: Vec<u8>, key: String) -> Result<&Self, MemoryError> {
+    fn put_bytes_inner(&mut self, value: Vec<u8>, key: String) -> Result<(), MemoryError> {
         self.data.insert(key, value);
-        Ok(self)
+        Ok(())
     }
 
-    async fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, MemoryError> {
+    fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, MemoryError> {
         let objects = self
             .data
             .iter()
@@ -54,19 +54,19 @@ impl Memory {
         Ok(objects)
     }
 
-    async fn put_object_inner<VALUE, F>(
+    fn put_object_inner<VALUE, F>(
         &mut self,
         key: String,
         value: &VALUE,
         f: F,
-    ) -> Result<&Self, MemoryError>
+    ) -> Result<(), MemoryError>
     where
         F: Fn(&VALUE) -> Result<Vec<u8>, MemoryError>,
     {
         let serialize = f(value);
 
         match serialize {
-            Ok(res) => self.put_bytes_inner(res, key).await,
+            Ok(res) => self.put_bytes_inner(res, key),
             Err(err) => {
                 let memory_error = MemoryError::from(ParserError::Serde {
                     internal: err.to_string(),
@@ -76,11 +76,7 @@ impl Memory {
         }
     }
 
-    async fn get_object_inner<RETURN, F>(
-        &self,
-        key: String,
-        f: F,
-    ) -> Result<Option<RETURN>, MemoryError>
+    fn get_object_inner<RETURN, F>(&self, key: String, f: F) -> Result<Option<RETURN>, MemoryError>
     where
         RETURN: Send + Sync,
         F: Fn(&[u8]) -> Result<RETURN, MemoryError>,
@@ -108,7 +104,6 @@ impl SinkCopy for Memory {
         PARSER: ParserWhere,
     {
         self.exists_inner(key_with_parser.key().name().as_str())
-            .await
     }
 
     #[inline]
@@ -116,7 +111,7 @@ impl SinkCopy for Memory {
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
-    ) -> Result<&Self, Self::Error>
+    ) -> Result<(), Self::Error>
     where
         VALUE: ValueWhere,
         DKEY: DKeyWhere,
@@ -125,7 +120,6 @@ impl SinkCopy for Memory {
         self.put_object_inner(key_with_parser.key().name(), value, |value| {
             Ok(key_with_parser.parser().serialize_value(value)?)
         })
-        .await
     }
 
     #[inline]
@@ -134,11 +128,11 @@ impl SinkCopy for Memory {
         value: Vec<u8>,
         key: &DKEY,
         _mime: String,
-    ) -> Result<&Self, Self::Error>
+    ) -> Result<(), Self::Error>
     where
         DKEY: DKeyWhere,
     {
-        self.put_bytes_inner(value, key.name()).await
+        self.put_bytes_inner(value, key.name())
     }
 
     #[inline]
@@ -154,12 +148,11 @@ impl SinkCopy for Memory {
         self.get_object_inner(key_with_parser.key().name(), |content| {
             Ok(key_with_parser.parser().deserialize_value(content)?)
         })
-        .await
     }
 
     #[inline]
     async fn list_objects_copy(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        self.list_objects_inner(prefix).await
+        self.list_objects_inner(prefix)
     }
 }
 
