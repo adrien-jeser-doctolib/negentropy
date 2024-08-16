@@ -19,7 +19,7 @@ pub trait ParserWhere = Parser + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
 pub type ListKeyObjects = HashSet<String>;
 
-pub trait Sink {
+pub trait SinkCopy {
     type Error;
 
     fn exists<DKEY, PARSER>(

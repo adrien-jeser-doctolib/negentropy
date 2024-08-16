@@ -2,7 +2,8 @@ use serde::de::DeserializeOwned;
 
 use crate::storage::direct::DKeyWithParser;
 use crate::storage::{
-    radix_key, DKeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Sink, ValueWhere,
+    radix_key, DKeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, SinkCopy,
+    ValueWhere,
 };
 use crate::HashMap;
 
@@ -33,7 +34,7 @@ impl Memory {
     }
 }
 
-impl Sink for Memory {
+impl SinkCopy for Memory {
     type Error = MemoryError;
 
     #[inline]

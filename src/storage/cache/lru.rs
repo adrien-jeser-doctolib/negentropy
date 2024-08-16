@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::storage::direct::DKeyWithParser;
 use crate::storage::{
-    radix_key, Cache, DKeyWhere, ListKeyObjects, LruError, ParserWhere, Sink, ValueWhere,
+    radix_key, Cache, DKeyWhere, ListKeyObjects, LruError, ParserWhere, SinkCopy, ValueWhere,
 };
 use crate::HashSet;
 
@@ -18,7 +18,7 @@ pub struct Lru<STORAGE> {
 
 impl<STORAGE> Lru<STORAGE>
 where
-    STORAGE: Sink + Send + Sync,
+    STORAGE: SinkCopy + Send + Sync,
 {
     #[inline]
     pub fn new(size: NonZeroUsize, storage: STORAGE) -> Self {
@@ -32,8 +32,8 @@ where
 
 impl<STORAGE> Cache for Lru<STORAGE>
 where
-    STORAGE: Sink + Send + Sync,
-    LruError: From<<STORAGE as Sink>::Error>,
+    STORAGE: SinkCopy + Send + Sync,
+    LruError: From<<STORAGE as SinkCopy>::Error>,
 {
     type Error = LruError;
 

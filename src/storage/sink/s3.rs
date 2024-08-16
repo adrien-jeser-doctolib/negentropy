@@ -11,7 +11,7 @@ use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
 use crate::storage::direct::DKeyWithParser;
-use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, Sink, ValueWhere};
+use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, SinkCopy, ValueWhere};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -116,9 +116,41 @@ impl S3 {
             }),
         }
     }
+
+    async fn get_object_inner<RETURN, F>(
+        &self,
+        key: String,
+        f: F,
+    ) -> Result<Option<RETURN>, S3Error>
+    where
+        RETURN: Send + Sync,
+        F: Fn(&[u8]) -> Result<RETURN, S3Error>,
+    {
+        let object = self
+            .inner
+            .get_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .send()
+            .await;
+
+        match object {
+            Ok(object_output) => parse_s3_object(object_output, key, f).await,
+            Err(SdkError::ServiceError(err))
+                if matches!(err.err(), &GetObjectError::NoSuchKey(_)) =>
+            {
+                Ok(None)
+            }
+            Err(err) => Err(S3Error::S3Object {
+                operation: "get_object".to_owned(),
+                key,
+                internal: err.to_string(),
+            }),
+        }
+    }
 }
 
-impl Sink for S3 {
+impl SinkCopy for S3 {
     type Error = S3Error;
 
     #[inline]
@@ -176,27 +208,10 @@ impl Sink for S3 {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let object = self
-            .inner
-            .get_object()
-            .bucket(&self.bucket)
-            .key(key_with_parser.key().name())
-            .send()
-            .await;
-
-        match object {
-            Ok(object_output) => parse_s3_object(object_output, key_with_parser).await,
-            Err(SdkError::ServiceError(err))
-                if matches!(err.err(), &GetObjectError::NoSuchKey(_)) =>
-            {
-                Ok(None)
-            }
-            Err(err) => Err(S3Error::S3Object {
-                operation: "get_object".to_owned(),
-                key: key_with_parser.key().name(),
-                internal: err.to_string(),
-            }),
-        }
+        self.get_object_inner(key_with_parser.key().name(), |content| {
+            Ok(key_with_parser.parser().deserialize_value(content)?)
+        })
+        .await
     }
 
     #[inline]
@@ -217,14 +232,14 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Er
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-async fn parse_s3_object<RETURN, DKEY, PARSER>(
+async fn parse_s3_object<RETURN, F>(
     object: GetObjectOutput,
-    key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+    key: String,
+    f: F,
 ) -> Result<Option<RETURN>, S3Error>
 where
-    RETURN: DeserializeOwned + Send + Sync,
-    DKEY: DKeyWhere,
-    PARSER: ParserWhere,
+    RETURN: Send + Sync,
+    F: Fn(&[u8]) -> Result<RETURN, S3Error>,
 {
     if object.content_length().unwrap_or_default() == 0 {
         Ok(None)
@@ -232,10 +247,10 @@ where
         let try_decoding = object.body.collect().await;
 
         match try_decoding {
-            Ok(content) => parse_aggregated_bytes(content, key_with_parser),
+            Ok(content) => Ok(Some(parse_aggregated_bytes(content, f)?)),
             Err(err) => Err(S3Error::S3Object {
                 operation: "parse_s3_object".to_owned(),
-                key: key_with_parser.key().name(),
+                key,
                 internal: err.to_string(),
             }),
         }
@@ -243,19 +258,12 @@ where
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-fn parse_aggregated_bytes<RETURN, DKEY, PARSER>(
-    content: AggregatedBytes,
-    key_with_parser: &DKeyWithParser<DKEY, PARSER>,
-) -> Result<RETURN, S3Error>
+fn parse_aggregated_bytes<RETURN, F>(content: AggregatedBytes, f: F) -> Result<RETURN, S3Error>
 where
-    RETURN: DeserializeOwned + Send + Sync,
-    DKEY: DKeyWhere,
-    PARSER: ParserWhere,
+    RETURN: Send + Sync,
+    F: Fn(&[u8]) -> Result<RETURN, S3Error>,
 {
-    let object = key_with_parser
-        .parser()
-        .deserialize_value::<RETURN>(&content.to_vec())?;
-
+    let object = f(&content.to_vec())?;
     Ok(object)
 }
 
