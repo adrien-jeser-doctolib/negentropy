@@ -1,5 +1,8 @@
 use super::parser::Parser;
-use crate::DKey;
+
+pub trait DKey {
+    fn name(&self) -> String;
+}
 
 pub struct DKeyWithParser<'a, DKEY, PARSER>
 where

@@ -4,7 +4,7 @@ use lru::LruCache;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::storage::key_with_parser::DKeyWithParser;
+use crate::storage::direct::DKeyWithParser;
 use crate::storage::{
     radix_key, Cache, DKeyWhere, ListKeyObjects, LruError, ParserWhere, Sink, ValueWhere,
 };

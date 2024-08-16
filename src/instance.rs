@@ -6,8 +6,7 @@ use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::storage::key::DKey;
-use crate::storage::key_with_parser::DKeyWithParser;
+use crate::storage::direct::{DKey, DKeyWithParser};
 use crate::storage::parser::Json;
 use crate::storage::sink::memory::Memory;
 use crate::storage::{MemoryError, Sink, ValueWhere};

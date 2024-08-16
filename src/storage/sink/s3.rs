@@ -10,7 +10,7 @@ use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
-use crate::storage::key_with_parser::DKeyWithParser;
+use crate::storage::direct::DKeyWithParser;
 use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, Sink, ValueWhere};
 
 #[derive(Debug, Clone)]

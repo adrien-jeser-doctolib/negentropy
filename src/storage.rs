@@ -1,6 +1,5 @@
 pub mod cache;
-pub mod key;
-pub mod key_with_parser;
+pub mod direct;
 pub mod parser;
 pub mod sink;
 
@@ -8,8 +7,7 @@ use core::error::Error;
 use core::fmt;
 use core::future::Future;
 
-use key::DKey;
-use key_with_parser::DKeyWithParser;
+use direct::{DKey, DKeyWithParser};
 use parser::Parser;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
