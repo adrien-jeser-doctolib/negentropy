@@ -32,6 +32,67 @@ impl Memory {
     {
         self.data.get(&key.name())
     }
+
+    async fn exists_inner(&self, key: &str) -> Result<bool, MemoryError> {
+        Ok(self.data.contains_key(key))
+    }
+
+    async fn put_bytes_inner(&mut self, value: Vec<u8>, key: String) -> Result<&Self, MemoryError> {
+        self.data.insert(key, value);
+        Ok(self)
+    }
+
+    async fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, MemoryError> {
+        let objects = self
+            .data
+            .iter()
+            .filter(|&(key, _)| key.starts_with(prefix))
+            .filter_map(|(key, _)| radix_key(prefix, key))
+            .collect();
+
+        // TODO: Limit to 1000 keys
+        Ok(objects)
+    }
+
+    async fn put_object_inner<VALUE, F>(
+        &mut self,
+        key: String,
+        value: &VALUE,
+        f: F,
+    ) -> Result<&Self, MemoryError>
+    where
+        F: Fn(&VALUE) -> Result<Vec<u8>, MemoryError>,
+    {
+        let serialize = f(value);
+
+        match serialize {
+            Ok(res) => self.put_bytes_inner(res, key).await,
+            Err(err) => {
+                let memory_error = MemoryError::from(ParserError::Serde {
+                    internal: err.to_string(),
+                });
+                Err(memory_error)
+            }
+        }
+    }
+
+    async fn get_object_inner<RETURN, F>(
+        &self,
+        key: String,
+        f: F,
+    ) -> Result<Option<RETURN>, MemoryError>
+    where
+        RETURN: Send + Sync,
+        F: Fn(&[u8]) -> Result<RETURN, MemoryError>,
+    {
+        let object = self.data.get(&key);
+        let value = object.map_or_else(
+            || Ok(None),
+            |content| f(content).map(|content| Some(content)),
+        )?;
+
+        Ok(value)
+    }
 }
 
 impl SinkCopy for Memory {
