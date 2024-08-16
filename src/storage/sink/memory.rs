@@ -107,7 +107,8 @@ impl SinkCopy for Memory {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        Ok(self.data.contains_key(&key_with_parser.key().name()))
+        self.exists_inner(key_with_parser.key().name().as_str())
+            .await
     }
 
     #[inline]
@@ -121,20 +122,10 @@ impl SinkCopy for Memory {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let serialize = key_with_parser.parser().serialize_value(value);
-
-        match serialize {
-            Ok(res) => {
-                self.put_bytes(res, key_with_parser.key(), key_with_parser.parser().mime())
-                    .await
-            }
-            Err(err) => {
-                let memory_error = MemoryError::from(ParserError::Serde {
-                    internal: err.to_string(),
-                });
-                Err(memory_error)
-            }
-        }
+        self.put_object_inner(key_with_parser.key().name(), value, |value| {
+            Ok(key_with_parser.parser().serialize_value(value)?)
+        })
+        .await
     }
 
     #[inline]
@@ -147,8 +138,7 @@ impl SinkCopy for Memory {
     where
         DKEY: DKeyWhere,
     {
-        self.data.insert(key.name(), value);
-        Ok(self)
+        self.put_bytes_inner(value, key.name()).await
     }
 
     #[inline]
@@ -161,26 +151,15 @@ impl SinkCopy for Memory {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let object = self.data.get(&key_with_parser.key().name());
-        let value = object.map_or_else(
-            || Ok(None),
-            |content| key_with_parser.parser().deserialize_value(content),
-        )?;
-
-        Ok(value)
+        self.get_object_inner(key_with_parser.key().name(), |content| {
+            Ok(key_with_parser.parser().deserialize_value(content)?)
+        })
+        .await
     }
 
     #[inline]
     async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        let objects = self
-            .data
-            .iter()
-            .filter(|&(key, _)| key.starts_with(prefix))
-            .filter_map(|(key, _)| radix_key(prefix, key))
-            .collect();
-
-        // TODO: Limit to 1000 keys
-        Ok(objects)
+        self.list_objects_inner(prefix).await
     }
 }
 
