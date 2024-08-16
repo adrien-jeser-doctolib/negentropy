@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::ParserError;
 use crate::storage::ValueWhere;
@@ -10,7 +10,7 @@ pub trait Parser {
 
     fn deserialize_value<CONTENT>(&self, content: &[u8]) -> Result<CONTENT, ParserError>
     where
-        CONTENT: for<'content> serde::Deserialize<'content>;
+        CONTENT: for<'content> Deserialize<'content>;
 
     fn mime(&self) -> String;
 }
@@ -32,7 +32,7 @@ impl Parser for Json {
     #[inline]
     fn deserialize_value<RETURN>(&self, content: &[u8]) -> Result<RETURN, ParserError>
     where
-        RETURN: for<'content> serde::Deserialize<'content>,
+        RETURN: for<'content> Deserialize<'content>,
     {
         serde_json::from_slice(content).map_err(|err| ParserError::Serde {
             internal: err.to_string(),
