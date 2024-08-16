@@ -4,9 +4,9 @@ use lru::LruCache;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::storage::key_with_parser::KeyWithParser;
+use crate::storage::key_with_parser::DKeyWithParser;
 use crate::storage::{
-    radix_key, Cache, KeyWhere, ListKeyObjects, LruError, ParserWhere, Sink, ValueWhere,
+    radix_key, Cache, DKeyWhere, ListKeyObjects, LruError, ParserWhere, Sink, ValueWhere,
 };
 use crate::HashSet;
 
@@ -36,25 +36,25 @@ where
 {
     type Error = LruError;
 
-    async fn exists<KEY, PARSER>(
+    async fn exists<DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         Ok(self.exists.contains(&key_with_parser.key().name()))
     }
 
-    async fn put_object<VALUE, KEY, PARSER>(
+    async fn put_object<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
     where
         VALUE: ValueWhere,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         self.storage.put_object(key_with_parser, value).await?;
@@ -64,14 +64,14 @@ where
         Ok(self)
     }
 
-    async fn put_bytes<KEY>(
+    async fn put_bytes<DKEY>(
         &mut self,
         value: Vec<u8>,
-        key: &KEY,
+        key: &DKEY,
         mime: String,
     ) -> Result<&Self, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
     {
         self.storage.put_bytes(value.clone(), key, mime).await?;
         self.cache.put(key.name(), value);
@@ -79,13 +79,13 @@ where
         Ok(self)
     }
 
-    async fn get_object<RETURN, KEY, PARSER>(
+    async fn get_object<RETURN, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync + Serialize,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         let exists = self.exists(key_with_parser).await?;
@@ -113,9 +113,9 @@ where
             .collect())
     }
 
-    async fn get_bytes<KEY>(&mut self, key: &KEY) -> Result<Option<Vec<u8>>, Self::Error>
+    async fn get_bytes<DKEY>(&mut self, key: &DKEY) -> Result<Option<Vec<u8>>, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
     {
         let bytes = self.cache.get(&key.name()).cloned();
         Ok(bytes)

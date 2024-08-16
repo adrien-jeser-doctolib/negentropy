@@ -22,7 +22,7 @@
 #![expect(clippy::exhaustive_structs, reason = "Accept breaking struct")]
 
 use serde::Serialize;
-use storage::key::Key;
+use storage::key::DKey;
 
 pub mod instance;
 pub mod storage;
@@ -40,7 +40,7 @@ pub enum InstanceKey {
     Alive(String, String),
 }
 
-impl Key for InstanceKey {
+impl DKey for InstanceKey {
     #[inline]
     fn name(&self) -> String {
         match *self {

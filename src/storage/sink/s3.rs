@@ -10,8 +10,8 @@ use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
-use crate::storage::key_with_parser::KeyWithParser;
-use crate::storage::{KeyWhere, ListKeyObjects, ParserWhere, S3Error, Sink, ValueWhere};
+use crate::storage::key_with_parser::DKeyWithParser;
+use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, Sink, ValueWhere};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -33,12 +33,12 @@ impl Sink for S3 {
     type Error = S3Error;
 
     #[inline]
-    async fn exists<KEY, PARSER>(
+    async fn exists<DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         let head_object = self
@@ -65,14 +65,14 @@ impl Sink for S3 {
     }
 
     #[inline]
-    async fn put_object<VALUE, KEY, PARSER>(
+    async fn put_object<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
     where
         VALUE: ValueWhere,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
@@ -91,14 +91,14 @@ impl Sink for S3 {
     }
 
     #[inline]
-    async fn put_bytes<KEY>(
+    async fn put_bytes<DKEY>(
         &mut self,
         value: Vec<u8>,
-        key: &KEY,
+        key: &DKEY,
         mime: String,
     ) -> Result<&Self, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
     {
         self.inner
             .put_object()
@@ -118,13 +118,13 @@ impl Sink for S3 {
     }
 
     #[inline]
-    async fn get_object<RETURN, KEY, PARSER>(
+    async fn get_object<RETURN, DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         let object = self
@@ -184,13 +184,13 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Er
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-async fn parse_s3_object<RETURN, KEY, PARSER>(
+async fn parse_s3_object<RETURN, DKEY, PARSER>(
     object: GetObjectOutput,
-    key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+    key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
 ) -> Result<Option<RETURN>, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
-    KEY: KeyWhere,
+    DKEY: DKeyWhere,
     PARSER: ParserWhere,
 {
     if object.content_length().unwrap_or_default() == 0 {
@@ -210,13 +210,13 @@ where
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-fn parse_aggregated_bytes<RETURN, KEY, PARSER>(
+fn parse_aggregated_bytes<RETURN, DKEY, PARSER>(
     content: AggregatedBytes,
-    key_with_parser: &KeyWithParser<KEY, PARSER>,
+    key_with_parser: &DKeyWithParser<DKEY, PARSER>,
 ) -> Result<RETURN, S3Error>
 where
     RETURN: DeserializeOwned + Send + Sync,
-    KEY: KeyWhere,
+    DKEY: DKeyWhere,
     PARSER: ParserWhere,
 {
     let object = key_with_parser

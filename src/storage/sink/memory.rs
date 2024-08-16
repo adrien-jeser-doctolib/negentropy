@@ -1,8 +1,8 @@
 use serde::de::DeserializeOwned;
 
-use crate::storage::key_with_parser::KeyWithParser;
+use crate::storage::key_with_parser::DKeyWithParser;
 use crate::storage::{
-    radix_key, KeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Sink, ValueWhere,
+    radix_key, DKeyWhere, ListKeyObjects, MemoryError, ParserError, ParserWhere, Sink, ValueWhere,
 };
 use crate::HashMap;
 
@@ -25,9 +25,9 @@ impl Memory {
     }
 
     #[inline]
-    pub fn get_bytes<KEY>(&mut self, key: &KEY) -> Option<&Vec<u8>>
+    pub fn get_bytes<DKEY>(&mut self, key: &DKEY) -> Option<&Vec<u8>>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
     {
         self.data.get(&key.name())
     }
@@ -37,26 +37,26 @@ impl Sink for Memory {
     type Error = MemoryError;
 
     #[inline]
-    async fn exists<KEY, PARSER>(
+    async fn exists<DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         Ok(self.data.contains_key(&key_with_parser.key().name()))
     }
 
     #[inline]
-    async fn put_object<VALUE, KEY, PARSER>(
+    async fn put_object<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
     where
         VALUE: ValueWhere,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         let serialize = key_with_parser.parser().serialize_value(value);
@@ -76,27 +76,27 @@ impl Sink for Memory {
     }
 
     #[inline]
-    async fn put_bytes<KEY>(
+    async fn put_bytes<DKEY>(
         &mut self,
         value: Vec<u8>,
-        key: &KEY,
+        key: &DKEY,
         _mime: String,
     ) -> Result<&Self, Self::Error>
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
     {
         self.data.insert(key.name(), value);
         Ok(self)
     }
 
     #[inline]
-    async fn get_object<RETURN, KEY, PARSER>(
+    async fn get_object<RETURN, DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<'_, KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
         let object = self.data.get(&key_with_parser.key().name());
@@ -125,7 +125,7 @@ impl Sink for Memory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Key;
+    use crate::DKey;
 
     enum TestKey {
         One,
@@ -134,7 +134,7 @@ mod tests {
         VeryLong,
     }
 
-    impl Key for TestKey {
+    impl DKey for TestKey {
         fn name(&self) -> String {
             match *self {
                 TestKey::One => "one".to_owned(),

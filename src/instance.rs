@@ -6,8 +6,8 @@ use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::storage::key::Key;
-use crate::storage::key_with_parser::KeyWithParser;
+use crate::storage::key::DKey;
+use crate::storage::key_with_parser::DKeyWithParser;
 use crate::storage::parser::Json;
 use crate::storage::sink::memory::Memory;
 use crate::storage::{MemoryError, Sink, ValueWhere};
@@ -129,7 +129,7 @@ where
 
     async fn welcome(mut self) -> Result<Self, SINK::Error> {
         let welcome = Welcome::default();
-        let key_with_parser = KeyWithParser::new(&InstanceKey::Welcome, &Json);
+        let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         self.storage
             .put_object_if_not_exists(&key_with_parser, &welcome)
             .await?;
@@ -139,25 +139,25 @@ where
     async fn initialize(mut self) -> Result<Self, SINK::Error> {
         let initialize = Initialize;
         let key = &InstanceKey::Initialize(self.instance_id.to_string());
-        let key_with_parser = KeyWithParser::new(key, &Json);
+        let key_with_parser = DKeyWithParser::new(key, &Json);
         self.storage
             .put_object_if_not_exists(&key_with_parser, &initialize)
             .await?;
         Ok(self)
     }
 
-    pub async fn put_object<KEY, VALUE>(
+    pub async fn put_object<DKEY, VALUE>(
         &mut self,
-        key: &KEY,
+        key: &DKEY,
         value: &VALUE,
     ) -> Result<&Self, SINK::Error>
     where
-        KEY: Key + Send + Sync,
+        DKEY: DKey + Send + Sync,
         VALUE: ValueWhere,
         <SINK as Sink>::Error: std::fmt::Debug,
     {
         self.storage
-            .put_object_if_not_exists(&KeyWithParser::new(key, &Json), value)
+            .put_object_if_not_exists(&DKeyWithParser::new(key, &Json), value)
             .await
             .unwrap();
 
@@ -174,7 +174,7 @@ mod tests {
     async fn welcome() {
         let memory = Memory::default();
         let instance = Instance::new(memory, Uuid::new_v4()).await.unwrap();
-        let key_with_parser = KeyWithParser::new(&InstanceKey::Welcome, &Json);
+        let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         instance
             .storage
             .get_object::<Welcome, _, _>(&key_with_parser)

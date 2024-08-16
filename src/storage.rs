@@ -7,17 +7,16 @@ pub mod sink;
 use core::error::Error;
 use core::fmt;
 use core::future::Future;
-use std::hash::Hash;
 
-use key::Key;
-use key_with_parser::KeyWithParser;
+use key::DKey;
+use key_with_parser::DKeyWithParser;
 use parser::Parser;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::HashSet;
 
-pub trait KeyWhere = Key + Send + Sync;
+pub trait DKeyWhere = DKey + Send + Sync;
 pub trait ParserWhere = Parser + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
 pub type ListKeyObjects = HashSet<String>;
@@ -25,22 +24,22 @@ pub type ListKeyObjects = HashSet<String>;
 pub trait Sink {
     type Error;
 
-    fn exists<KEY, PARSER>(
+    fn exists<DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
     #[inline]
-    fn put_object_if_not_exists<KEY, PARSER, VALUE>(
+    fn put_object_if_not_exists<DKEY, PARSER, VALUE>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
         VALUE: ValueWhere,
         Self: Send,
@@ -55,32 +54,32 @@ pub trait Sink {
         }
     }
 
-    fn put_object<VALUE, KEY, PARSER>(
+    fn put_object<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
         VALUE: ValueWhere,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
-    fn put_bytes<KEY>(
+    fn put_bytes<DKEY>(
         &mut self,
         value: Vec<u8>,
-        key: &KEY,
+        key: &DKEY,
         mime: String,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
-        KEY: KeyWhere;
+        DKEY: DKeyWhere;
 
-    fn get_object<RETURN, KEY, PARSER>(
+    fn get_object<RETURN, DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
         RETURN: DeserializeOwned + Send + Sync,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
     fn list_objects(
@@ -92,22 +91,22 @@ pub trait Sink {
 pub trait Cache {
     type Error;
 
-    fn exists<KEY, PARSER>(
+    fn exists<DKEY, PARSER>(
         &self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
     #[inline]
-    fn put_object_if_not_exists<KEY, PARSER, VALUE>(
+    fn put_object_if_not_exists<DKEY, PARSER, VALUE>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere,
         VALUE: ValueWhere,
         Self: Send,
@@ -122,40 +121,40 @@ pub trait Cache {
         }
     }
 
-    fn put_object<VALUE, KEY, PARSER>(
+    fn put_object<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
         VALUE: ValueWhere,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
-    fn put_bytes<KEY>(
+    fn put_bytes<DKEY>(
         &mut self,
         value: Vec<u8>,
-        key: &KEY,
+        key: &DKEY,
         mime: String,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
-        KEY: KeyWhere;
+        DKEY: DKeyWhere;
 
-    fn get_object<RETURN, KEY, PARSER>(
+    fn get_object<RETURN, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &KeyWithParser<KEY, PARSER>,
+        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
         RETURN: DeserializeOwned + Send + Sync + Serialize,
-        KEY: KeyWhere,
+        DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
-    fn get_bytes<KEY>(
+    fn get_bytes<DKEY>(
         &mut self,
-        key: &KEY,
+        key: &DKEY,
     ) -> impl Future<Output = Result<Option<Vec<u8>>, Self::Error>> + Send
     where
-        KEY: KeyWhere;
+        DKEY: DKeyWhere;
 
     fn list_objects(
         &mut self,

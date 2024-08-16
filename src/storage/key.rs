@@ -1,3 +1,3 @@
-pub trait Key {
+pub trait DKey {
     fn name(&self) -> String;
 }
