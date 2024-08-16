@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use std::path::Path;
 use std::{env, fs};
 
@@ -145,6 +146,7 @@ where
         Ok(self)
     }
 
+    #[inline]
     pub async fn put_object<DKEY, VALUE>(
         &mut self,
         key: &DKEY,
@@ -153,12 +155,11 @@ where
     where
         DKEY: DKey + Send + Sync,
         VALUE: ValueWhere,
-        <SINK as Sink>::Error: core::fmt::Debug,
+        <SINK as Sink>::Error: Debug,
     {
         self.storage
             .put_object_if_not_exists(&DKeyWithParser::new(key, &Json), value)
-            .await
-            .unwrap();
+            .await?;
 
         Ok(self)
     }

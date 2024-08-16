@@ -20,6 +20,7 @@ impl<STORAGE> Lru<STORAGE>
 where
     STORAGE: Sink + Send + Sync,
 {
+    #[inline]
     pub fn new(size: NonZeroUsize, storage: STORAGE) -> Self {
         Self {
             exists: HashSet::new(),
@@ -36,6 +37,7 @@ where
 {
     type Error = LruError;
 
+    #[inline]
     async fn exists<DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
@@ -47,6 +49,7 @@ where
         Ok(self.exists.contains(&key_with_parser.key().name()))
     }
 
+    #[inline]
     async fn put_object<VALUE, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
@@ -64,6 +67,7 @@ where
         Ok(self)
     }
 
+    #[inline]
     async fn put_bytes<DKEY>(
         &mut self,
         value: Vec<u8>,
@@ -79,6 +83,7 @@ where
         Ok(self)
     }
 
+    #[inline]
     async fn get_object<RETURN, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
@@ -104,6 +109,7 @@ where
         }
     }
 
+    #[inline]
     async fn list_objects(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
         Ok(self
             .cache
@@ -113,10 +119,12 @@ where
             .collect())
     }
 
+    #[inline]
     async fn get_bytes<DKEY>(&mut self, key: &DKEY) -> Result<Option<Vec<u8>>, Self::Error>
     where
         DKEY: DKeyWhere,
     {
+        // TODO: Get from sink
         let bytes = self.cache.get(&key.name()).cloned();
         Ok(bytes)
     }

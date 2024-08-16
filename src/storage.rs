@@ -202,6 +202,7 @@ impl fmt::Display for S3Error {
 impl Error for S3Error {}
 
 impl From<ParserError> for S3Error {
+    #[inline]
     fn from(value: ParserError) -> Self {
         Self::Serde(value)
     }
@@ -219,13 +220,14 @@ impl fmt::Display for MemoryError {
         reason = "conflict with clippy::renamed_function_params lint"
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Serde(err) => write!(f, "ParseMemory: {err}"),
+        match *self {
+            Self::Serde(ref err) => write!(f, "ParseMemory: {err}"),
         }
     }
 }
 
 impl From<ParserError> for MemoryError {
+    #[inline]
     fn from(value: ParserError) -> Self {
         Self::Serde(value)
     }
@@ -245,8 +247,8 @@ impl fmt::Display for ParserError {
         reason = "conflict with clippy::renamed_function_params lint"
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Serde { internal } => write!(f, "Can not serde : {internal}"),
+        match *self {
+            Self::Serde { ref internal } => write!(f, "Can not serde : {internal}"),
         }
     }
 }
@@ -266,20 +268,22 @@ impl fmt::Display for LruError {
         reason = "conflict with clippy::renamed_function_params lint"
     )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::S3(err) => write!(f, "LruError: {err}"),
-            Self::Parser(err) => write!(f, "ParserError: {err}"),
+        match *self {
+            Self::S3(ref err) => write!(f, "LruError: {err}"),
+            Self::Parser(ref err) => write!(f, "ParserError: {err}"),
         }
     }
 }
 
 impl From<S3Error> for LruError {
+    #[inline]
     fn from(value: S3Error) -> Self {
         Self::S3(value)
     }
 }
 
 impl From<ParserError> for LruError {
+    #[inline]
     fn from(value: ParserError) -> Self {
         Self::Parser(value)
     }
