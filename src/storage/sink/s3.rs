@@ -154,7 +154,7 @@ impl SinkCopy for S3 {
     type Error = S3Error;
 
     #[inline]
-    async fn exists<DKEY, PARSER>(
+    async fn exists_copy<DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
@@ -166,7 +166,7 @@ impl SinkCopy for S3 {
     }
 
     #[inline]
-    async fn put_object<VALUE, DKEY, PARSER>(
+    async fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
@@ -186,7 +186,7 @@ impl SinkCopy for S3 {
     }
 
     #[inline]
-    async fn put_bytes<DKEY>(
+    async fn put_bytes_copy<DKEY>(
         &mut self,
         value: Vec<u8>,
         key: &DKEY,
@@ -199,7 +199,7 @@ impl SinkCopy for S3 {
     }
 
     #[inline]
-    async fn get_object<RETURN, DKEY, PARSER>(
+    async fn get_object_copy<RETURN, DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
@@ -215,7 +215,7 @@ impl SinkCopy for S3 {
     }
 
     #[inline]
-    async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
+    async fn list_objects_copy(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
         self.list_objects_inner(prefix).await
     }
 }

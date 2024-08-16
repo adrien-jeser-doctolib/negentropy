@@ -60,7 +60,7 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        self.storage.put_object(key_with_parser, value).await?;
+        self.storage.put_object_copy(key_with_parser, value).await?;
         let serialize = key_with_parser.parser().serialize_value(value)?;
         self.cache.put(key_with_parser.key().name(), serialize);
         self.exists.insert(key_with_parser.key().name());
@@ -77,7 +77,9 @@ where
     where
         DKEY: DKeyWhere,
     {
-        self.storage.put_bytes(value.clone(), key, mime).await?;
+        self.storage
+            .put_bytes_copy(value.clone(), key, mime)
+            .await?;
         self.cache.put(key.name(), value);
         self.exists.insert(key.name());
         Ok(self)
@@ -103,7 +105,7 @@ where
                 .transpose()?;
             Ok(value)
         } else {
-            let object = self.storage.get_object(key_with_parser).await?;
+            let object = self.storage.get_object_copy(key_with_parser).await?;
             self.put_object(key_with_parser, &object).await?;
             Ok(object)
         }

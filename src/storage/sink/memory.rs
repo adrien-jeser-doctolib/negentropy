@@ -99,7 +99,7 @@ impl SinkCopy for Memory {
     type Error = MemoryError;
 
     #[inline]
-    async fn exists<DKEY, PARSER>(
+    async fn exists_copy<DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
@@ -112,7 +112,7 @@ impl SinkCopy for Memory {
     }
 
     #[inline]
-    async fn put_object<VALUE, DKEY, PARSER>(
+    async fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
@@ -129,7 +129,7 @@ impl SinkCopy for Memory {
     }
 
     #[inline]
-    async fn put_bytes<DKEY>(
+    async fn put_bytes_copy<DKEY>(
         &mut self,
         value: Vec<u8>,
         key: &DKEY,
@@ -142,7 +142,7 @@ impl SinkCopy for Memory {
     }
 
     #[inline]
-    async fn get_object<RETURN, DKEY, PARSER>(
+    async fn get_object_copy<RETURN, DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
@@ -158,7 +158,7 @@ impl SinkCopy for Memory {
     }
 
     #[inline]
-    async fn list_objects(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
+    async fn list_objects_copy(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
         self.list_objects_inner(prefix).await
     }
 }
@@ -197,7 +197,7 @@ mod tests {
         let mut memory = Memory::default();
         assert_eq!(memory.len(), 0);
         memory
-            .put_bytes(vec![], &TestKey::One, String::new())
+            .put_bytes_copy(vec![], &TestKey::One, String::new())
             .await
             .unwrap();
         assert_eq!(memory.len(), 1);
@@ -209,7 +209,7 @@ mod tests {
         let mut memory = Memory::default();
         assert_eq!(memory.len(), 0);
         memory
-            .put_bytes(vec![42, 0, 9], &TestKey::One, String::new())
+            .put_bytes_copy(vec![42, 0, 9], &TestKey::One, String::new())
             .await
             .unwrap();
         assert_eq!(memory.len(), 1);
@@ -221,28 +221,28 @@ mod tests {
         let mut memory = Memory::default();
         assert_eq!(memory.len(), 0);
         assert_eq!(
-            memory.list_objects("").await.unwrap(),
+            memory.list_objects_copy("").await.unwrap(),
             vec![].into_iter().collect()
         );
 
         memory
-            .put_bytes(vec![], &TestKey::One, String::new())
+            .put_bytes_copy(vec![], &TestKey::One, String::new())
             .await
             .unwrap();
 
         assert_eq!(
-            memory.list_objects("").await.unwrap(),
+            memory.list_objects_copy("").await.unwrap(),
             vec!["one".to_owned()].into_iter().collect(),
             "must have only `one`"
         );
 
         memory
-            .put_bytes(vec![], &TestKey::Long, String::new())
+            .put_bytes_copy(vec![], &TestKey::Long, String::new())
             .await
             .unwrap();
 
         assert_eq!(
-            memory.list_objects("").await.unwrap(),
+            memory.list_objects_copy("").await.unwrap(),
             vec!["one".to_owned(), "long/".to_owned()]
                 .into_iter()
                 .collect(),
@@ -250,16 +250,16 @@ mod tests {
         );
 
         memory
-            .put_bytes(vec![], &TestKey::Long2, String::new())
+            .put_bytes_copy(vec![], &TestKey::Long2, String::new())
             .await
             .unwrap();
         memory
-            .put_bytes(vec![], &TestKey::VeryLong, String::new())
+            .put_bytes_copy(vec![], &TestKey::VeryLong, String::new())
             .await
             .unwrap();
 
         assert_eq!(
-            memory.list_objects("").await.unwrap(),
+            memory.list_objects_copy("").await.unwrap(),
             vec!["one".to_owned(), "long/".to_owned()]
                 .into_iter()
                 .collect()
@@ -271,50 +271,50 @@ mod tests {
         let mut memory = Memory::default();
         assert_eq!(memory.len(), 0);
         assert_eq!(
-            memory.list_objects("long").await.unwrap(),
+            memory.list_objects_copy("long").await.unwrap(),
             vec![].into_iter().collect()
         );
 
         memory
-            .put_bytes(vec![], &TestKey::One, String::new())
+            .put_bytes_copy(vec![], &TestKey::One, String::new())
             .await
             .unwrap();
 
         assert_eq!(
-            memory.list_objects("long").await.unwrap(),
+            memory.list_objects_copy("long").await.unwrap(),
             vec![].into_iter().collect()
         );
 
         assert_eq!(
-            memory.list_objects("long/").await.unwrap(),
+            memory.list_objects_copy("long/").await.unwrap(),
             vec![].into_iter().collect()
         );
 
         memory
-            .put_bytes(vec![], &TestKey::Long, String::new())
+            .put_bytes_copy(vec![], &TestKey::Long, String::new())
             .await
             .unwrap();
 
         assert_eq!(
-            memory.list_objects("long").await.unwrap(),
+            memory.list_objects_copy("long").await.unwrap(),
             vec![].into_iter().collect()
         );
         assert_eq!(
-            memory.list_objects("long/").await.unwrap(),
+            memory.list_objects_copy("long/").await.unwrap(),
             vec!["long/qux".to_owned()].into_iter().collect()
         );
 
         memory
-            .put_bytes(vec![], &TestKey::Long2, String::new())
+            .put_bytes_copy(vec![], &TestKey::Long2, String::new())
             .await
             .unwrap();
         memory
-            .put_bytes(vec![], &TestKey::VeryLong, String::new())
+            .put_bytes_copy(vec![], &TestKey::VeryLong, String::new())
             .await
             .unwrap();
 
         assert_eq!(
-            memory.list_objects("long/").await.unwrap(),
+            memory.list_objects_copy("long/").await.unwrap(),
             vec![
                 "long/baz".to_owned(),
                 "long/qux".to_owned(),
@@ -325,7 +325,7 @@ mod tests {
         );
 
         assert_eq!(
-            memory.list_objects("long/verylong/").await.unwrap(),
+            memory.list_objects_copy("long/verylong/").await.unwrap(),
             vec!["long/verylong/buz".to_owned()].into_iter().collect()
         );
     }
