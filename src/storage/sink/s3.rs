@@ -94,6 +94,28 @@ impl S3 {
             }),
         }
     }
+
+    async fn put_object_inner<VALUE, F>(
+        &mut self,
+        key: String,
+        mime: String,
+        value: &VALUE,
+        f: F,
+    ) -> Result<&Self, S3Error>
+    where
+        F: Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
+    {
+        let serialize = f(value);
+
+        match serialize {
+            Ok(res) => self.put_bytes_inner(res, key, mime).await,
+            Err(err) => Err(S3Error::S3Object {
+                operation: "put_object".to_owned(),
+                key,
+                internal: err.to_string(),
+            }),
+        }
+    }
 }
 
 impl Sink for S3 {
@@ -122,19 +144,13 @@ impl Sink for S3 {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let serialize = key_with_parser.parser().serialize_value(value);
-
-        match serialize {
-            Ok(res) => {
-                self.put_bytes(res, key_with_parser.key(), key_with_parser.parser().mime())
-                    .await
-            }
-            Err(err) => Err(S3Error::S3Object {
-                operation: "put_object".to_owned(),
-                key: key_with_parser.key().name(),
-                internal: err.to_string(),
-            }),
-        }
+        self.put_object_inner(
+            key_with_parser.key().name(),
+            key_with_parser.parser().mime(),
+            value,
+            |value| Ok(key_with_parser.parser().serialize_value(value)?),
+        )
+        .await
     }
 
     #[inline]
