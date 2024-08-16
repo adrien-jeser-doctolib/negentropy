@@ -158,6 +158,11 @@ where
 
         Ok(self)
     }
+
+    #[inline]
+    pub fn cache(&mut self) -> &mut CACHE {
+        &mut self.storage
+    }
 }
 
 #[cfg(test)]
