@@ -44,7 +44,7 @@ pub enum BuilderError {
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct Builder {
-    instance_id: Option<String>,
+    pub instance_id: Option<Uuid>,
 }
 
 impl Builder {
@@ -75,9 +75,10 @@ impl Builder {
     #[must_use]
     pub fn load_from_env(self, prefix: &str) -> Self {
         let key = format!("{prefix}_NEGENTROPY_INSTANCE_ID");
-        Self {
-            instance_id: env::var(key).ok().or(self.instance_id),
-        }
+        let instance_id = env::var(key)
+            .ok()
+            .and_then(|value| Uuid::parse_str(&value).ok());
+        Self { instance_id }
     }
 
     #[inline]
@@ -94,16 +95,6 @@ impl Builder {
         } else {
             Ok(self)
         }
-    }
-
-    #[inline]
-    pub async fn build(self) -> Result<Instance<Memory>, MemoryError> {
-        let instance_id = self
-            .instance_id
-            .and_then(|instance_id| Uuid::parse_str(&instance_id).ok())
-            .ok_or_else(|| BuilderError::MissingVar("instance_id".to_owned()))
-            .unwrap();
-        Instance::new(Memory::default(), instance_id).await
     }
 }
 

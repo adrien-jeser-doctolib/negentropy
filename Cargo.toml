@@ -19,6 +19,7 @@ uuid = { version = "1.10.0", features = [
   "fast-rng",
   "macro-diagnostics",
   "v4",
+  "serde",
 ] }
 
 [features]
