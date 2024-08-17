@@ -103,7 +103,8 @@ impl S3 {
         parser: PARSER,
     ) -> Result<(), S3Error>
     where
-        PARSER: Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
+        VALUE: Send + Sync,
+        PARSER: Send + Sync + Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
     {
         let serialize = parser(value);
 
@@ -124,7 +125,7 @@ impl S3 {
     ) -> Result<Option<RETURN>, S3Error>
     where
         RETURN: Send + Sync,
-        PARSER: Fn(&[u8]) -> Result<RETURN, S3Error>,
+        PARSER: Send + Sync + Fn(&[u8]) -> Result<RETURN, S3Error>,
     {
         let object = self
             .inner
@@ -243,7 +244,7 @@ async fn parse_s3_object<RETURN, PARSER>(
 ) -> Result<Option<RETURN>, S3Error>
 where
     RETURN: Send + Sync,
-    PARSER: Fn(&[u8]) -> Result<RETURN, S3Error>,
+    PARSER: Send + Sync + Fn(&[u8]) -> Result<RETURN, S3Error>,
 {
     if object.content_length().unwrap_or_default() == 0 {
         Ok(None)
