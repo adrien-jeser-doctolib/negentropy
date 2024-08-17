@@ -89,7 +89,7 @@ pub trait SinkCopy {
 pub trait CacheCopy {
     type Error;
 
-    fn exists<DKEY, PARSER>(
+    fn exists_copy<DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
@@ -98,7 +98,7 @@ pub trait CacheCopy {
         PARSER: ParserWhere;
 
     #[inline]
-    fn put_object_if_not_exists<DKEY, PARSER, VALUE>(
+    fn put_object_if_not_exists_copy<DKEY, PARSER, VALUE>(
         &mut self,
         key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
@@ -110,16 +110,16 @@ pub trait CacheCopy {
         Self: Send,
     {
         async {
-            if self.exists(key_with_parser).await? {
+            if self.exists_copy(key_with_parser).await? {
                 Ok(false)
             } else {
-                self.put_object(key_with_parser, value).await?;
+                self.put_object_copy(key_with_parser, value).await?;
                 Ok(true)
             }
         }
     }
 
-    fn put_object<VALUE, DKEY, PARSER>(
+    fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<DKEY, PARSER>,
         value: &VALUE,
@@ -129,7 +129,7 @@ pub trait CacheCopy {
         DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
-    fn put_bytes<DKEY>(
+    fn put_bytes_copy<DKEY>(
         &mut self,
         key: &DKEY,
         mime: String,
@@ -138,7 +138,7 @@ pub trait CacheCopy {
     where
         DKEY: DKeyWhere;
 
-    fn get_object<RETURN, DKEY, PARSER>(
+    fn get_object_copy<RETURN, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
@@ -147,14 +147,14 @@ pub trait CacheCopy {
         DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
-    fn get_bytes<DKEY>(
+    fn get_bytes_copy<DKEY>(
         &mut self,
         key: &DKEY,
     ) -> impl Future<Output = Result<Option<Vec<u8>>, Self::Error>> + Send
     where
         DKEY: DKeyWhere;
 
-    fn list_objects(
+    fn list_objects_copy(
         &mut self,
         prefix: &str,
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;

@@ -96,7 +96,7 @@ where
     type Error = LruError;
 
     #[inline]
-    async fn exists<DKEY, PARSER>(
+    async fn exists_copy<DKEY, PARSER>(
         &self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
@@ -108,7 +108,7 @@ where
     }
 
     #[inline]
-    async fn put_object<VALUE, DKEY, PARSER>(
+    async fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
         value: &VALUE,
@@ -136,7 +136,7 @@ where
     }
 
     #[inline]
-    async fn put_bytes<DKEY>(
+    async fn put_bytes_copy<DKEY>(
         &mut self,
         key: &DKEY,
         mime: String,
@@ -151,7 +151,7 @@ where
     }
 
     #[inline]
-    async fn get_object<RETURN, DKEY, PARSER>(
+    async fn get_object_copy<RETURN, DKEY, PARSER>(
         &mut self,
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
@@ -172,7 +172,7 @@ where
                 let get_object_copy = self.storage.get_object_copy(key_with_parser).await?;
 
                 if let Some(ref value) = get_object_copy {
-                    self.put_object(key_with_parser, value).await?;
+                    self.put_object_copy(key_with_parser, value).await?;
                 }
 
                 Ok(get_object_copy)
@@ -181,12 +181,12 @@ where
     }
 
     #[inline]
-    async fn list_objects(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
+    async fn list_objects_copy(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
         self.list_objects_inner(prefix)
     }
 
     #[inline]
-    async fn get_bytes<DKEY>(&mut self, key: &DKEY) -> Result<Option<Vec<u8>>, Self::Error>
+    async fn get_bytes_copy<DKEY>(&mut self, key: &DKEY) -> Result<Option<Vec<u8>>, Self::Error>
     where
         DKEY: DKeyWhere,
     {

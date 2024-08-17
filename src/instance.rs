@@ -121,7 +121,7 @@ where
         let welcome = Welcome::default();
         let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         self.storage
-            .put_object_if_not_exists(&key_with_parser, &welcome)
+            .put_object_if_not_exists_copy(&key_with_parser, &welcome)
             .await?;
         Ok(self)
     }
@@ -136,7 +136,7 @@ where
         );
         let key_with_parser = DKeyWithParser::new(key, &Json);
         self.storage
-            .put_object_if_not_exists(&key_with_parser, &initialize)
+            .put_object_if_not_exists_copy(&key_with_parser, &initialize)
             .await?;
         Ok(self)
     }
@@ -153,7 +153,7 @@ where
         <CACHE as CacheCopy>::Error: Debug,
     {
         self.storage
-            .put_object_if_not_exists(&DKeyWithParser::new(key, &Json), value)
+            .put_object_if_not_exists_copy(&DKeyWithParser::new(key, &Json), value)
             .await?;
 
         Ok(self)
@@ -182,7 +182,7 @@ mod tests {
         let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
         instance
             .storage
-            .get_object::<Welcome, _, _>(&key_with_parser)
+            .get_object_copy::<Welcome, _, _>(&key_with_parser)
             .await
             .unwrap();
     }
