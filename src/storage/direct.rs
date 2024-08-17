@@ -4,22 +4,22 @@ pub trait DKey {
     fn name(&self) -> String;
 }
 
-pub struct DKeyWithParserCopy<'a, DKEY, PARSER>
+pub struct DKeyWithParserCopy<'content, DKEY, PARSER>
 where
     DKEY: DKey,
     PARSER: ParserCopy,
 {
-    key: &'a DKEY,
-    parser: &'a PARSER,
+    key: &'content DKEY,
+    parser: &'content PARSER,
 }
 
-impl<'a, DKEY, PARSER> DKeyWithParserCopy<'a, DKEY, PARSER>
+impl<'content, DKEY, PARSER> DKeyWithParserCopy<'content, DKEY, PARSER>
 where
     DKEY: DKey,
     PARSER: ParserCopy,
 {
     #[inline]
-    pub const fn new(key: &'a DKEY, parser: &'a PARSER) -> Self {
+    pub const fn new(key: &'content DKEY, parser: &'content PARSER) -> Self {
         Self { key, parser }
     }
 

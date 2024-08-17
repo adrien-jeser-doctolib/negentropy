@@ -53,7 +53,7 @@ impl S3 {
     }
 
     async fn put_bytes_inner(
-        &mut self,
+        &self,
         key: String,
         mime: String,
         value: Vec<u8>,
@@ -95,17 +95,17 @@ impl S3 {
         }
     }
 
-    async fn put_object_inner<VALUE, F>(
-        &mut self,
+    async fn put_object_inner<VALUE, PARSER>(
+        &self,
         key: String,
         mime: String,
         value: &VALUE,
-        f: F,
+        parser: PARSER,
     ) -> Result<(), S3Error>
     where
-        F: Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
+        PARSER: Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
     {
-        let serialize = f(value);
+        let serialize = parser(value);
 
         match serialize {
             Ok(res) => self.put_bytes_inner(key, mime, res).await,
@@ -117,14 +117,14 @@ impl S3 {
         }
     }
 
-    async fn get_object_inner<RETURN, F>(
+    async fn get_object_inner<RETURN, PARSER>(
         &self,
         key: String,
-        f: F,
+        parser: PARSER,
     ) -> Result<Option<RETURN>, S3Error>
     where
         RETURN: Send + Sync,
-        F: Fn(&[u8]) -> Result<RETURN, S3Error>,
+        PARSER: Fn(&[u8]) -> Result<RETURN, S3Error>,
     {
         let object = self
             .inner
@@ -135,7 +135,7 @@ impl S3 {
             .await;
 
         match object {
-            Ok(object_output) => parse_s3_object(object_output, key, f).await,
+            Ok(object_output) => parse_s3_object(object_output, key, parser).await,
             Err(SdkError::ServiceError(err))
                 if matches!(err.err(), &GetObjectError::NoSuchKey(_)) =>
             {
@@ -180,7 +180,11 @@ impl SinkCopy for S3 {
             key_with_parser.key().name(),
             key_with_parser.parser().mime(),
             value,
-            |value| Ok(key_with_parser.parser().serialize_value(value)?),
+            |value_to_serialize| {
+                Ok(key_with_parser
+                    .parser()
+                    .serialize_value(value_to_serialize)?)
+            },
         )
         .await
     }
@@ -232,14 +236,14 @@ fn handle_list_objects(list: ListObjectsV2Output) -> Result<ListKeyObjects, S3Er
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-async fn parse_s3_object<RETURN, F>(
+async fn parse_s3_object<RETURN, PARSER>(
     object: GetObjectOutput,
     key: String,
-    f: F,
+    parser: PARSER,
 ) -> Result<Option<RETURN>, S3Error>
 where
     RETURN: Send + Sync,
-    F: Fn(&[u8]) -> Result<RETURN, S3Error>,
+    PARSER: Fn(&[u8]) -> Result<RETURN, S3Error>,
 {
     if object.content_length().unwrap_or_default() == 0 {
         Ok(None)
@@ -247,7 +251,7 @@ where
         let try_decoding = object.body.collect().await;
 
         match try_decoding {
-            Ok(content) => Ok(Some(parse_aggregated_bytes(content, f)?)),
+            Ok(content) => Ok(Some(parse_aggregated_bytes(content, parser)?)),
             Err(err) => Err(S3Error::S3Object {
                 operation: "parse_s3_object".to_owned(),
                 key,
@@ -258,12 +262,15 @@ where
 }
 
 #[expect(clippy::single_call_fn, reason = "code readability")]
-fn parse_aggregated_bytes<RETURN, F>(content: AggregatedBytes, f: F) -> Result<RETURN, S3Error>
+fn parse_aggregated_bytes<RETURN, PARSER>(
+    content: AggregatedBytes,
+    parser: PARSER,
+) -> Result<RETURN, S3Error>
 where
     RETURN: Send + Sync,
-    F: Fn(&[u8]) -> Result<RETURN, S3Error>,
+    PARSER: Fn(&[u8]) -> Result<RETURN, S3Error>,
 {
-    let object = f(&content.to_vec())?;
+    let object = parser(&content.to_vec())?;
     Ok(object)
 }
 

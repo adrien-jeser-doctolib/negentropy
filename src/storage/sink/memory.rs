@@ -33,40 +33,39 @@ impl Memory {
         self.data.get(&key.name())
     }
 
-    fn exists_inner(&self, key: &str) -> Result<bool, MemoryError> {
-        Ok(self.data.contains_key(key))
+    fn exists_inner(&self, key: &str) -> bool {
+        self.data.contains_key(key)
     }
 
-    fn put_bytes_inner(&mut self, key: String, value: Vec<u8>) -> Result<(), MemoryError> {
+    fn put_bytes_inner(&mut self, key: String, value: Vec<u8>) {
         self.data.insert(key, value);
-        Ok(())
     }
 
-    fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, MemoryError> {
-        let objects = self
-            .data
+    fn list_objects_inner(&self, prefix: &str) -> ListKeyObjects {
+        // TODO: Limit to 1000 keys
+        self.data
             .iter()
             .filter(|&(key, _)| key.starts_with(prefix))
             .filter_map(|(key, _)| radix_key(prefix, key))
-            .collect();
-
-        // TODO: Limit to 1000 keys
-        Ok(objects)
+            .collect()
     }
 
-    fn put_object_inner<VALUE, F>(
+    fn put_object_inner<VALUE, PARSER>(
         &mut self,
         key: String,
         value: &VALUE,
-        f: F,
+        parser: PARSER,
     ) -> Result<(), MemoryError>
     where
-        F: Fn(&VALUE) -> Result<Vec<u8>, MemoryError>,
+        PARSER: Fn(&VALUE) -> Result<Vec<u8>, MemoryError>,
     {
-        let serialize = f(value);
+        let serialize = parser(value);
 
         match serialize {
-            Ok(res) => self.put_bytes_inner(key, res),
+            Ok(res) => {
+                self.put_bytes_inner(key, res);
+                Ok(())
+            }
             Err(err) => {
                 let memory_error = MemoryError::from(ParserError::Serde {
                     internal: err.to_string(),
@@ -76,15 +75,19 @@ impl Memory {
         }
     }
 
-    fn get_object_inner<RETURN, F>(&self, key: String, f: F) -> Result<Option<RETURN>, MemoryError>
+    fn get_object_inner<RETURN, PARSER>(
+        &self,
+        key: &str,
+        parser: PARSER,
+    ) -> Result<Option<RETURN>, MemoryError>
     where
         RETURN: Send + Sync,
-        F: Fn(&[u8]) -> Result<RETURN, MemoryError>,
+        PARSER: Fn(&[u8]) -> Result<RETURN, MemoryError>,
     {
-        let object = self.data.get(&key);
+        let object = self.data.get(key);
         let value = object.map_or_else(
             || Ok(None),
-            |content| f(content).map(|content| Some(content)),
+            |content_to_deserialize| parser(content_to_deserialize).map(|content| Some(content)),
         )?;
 
         Ok(value)
@@ -103,7 +106,8 @@ impl SinkCopy for Memory {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        self.exists_inner(key_with_parser.key().name().as_str())
+        let exists = self.exists_inner(key_with_parser.key().name().as_str());
+        Ok(exists)
     }
 
     #[inline]
@@ -117,8 +121,11 @@ impl SinkCopy for Memory {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        self.put_object_inner(key_with_parser.key().name(), value, |value| {
-            Ok(key_with_parser.parser().serialize_value(value)?)
+        self.put_object_inner(key_with_parser.key().name(), value, |value_to_serialize| {
+            let serialize_value = key_with_parser
+                .parser()
+                .serialize_value(value_to_serialize)?;
+            Ok(serialize_value)
         })
     }
 
@@ -132,7 +139,8 @@ impl SinkCopy for Memory {
     where
         DKEY: DKeyWhere,
     {
-        self.put_bytes_inner(key.name(), value)
+        self.put_bytes_inner(key.name(), value);
+        Ok(())
     }
 
     #[inline]
@@ -145,14 +153,15 @@ impl SinkCopy for Memory {
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        self.get_object_inner(key_with_parser.key().name(), |content| {
-            Ok(key_with_parser.parser().deserialize_value(content)?)
+        self.get_object_inner(&key_with_parser.key().name(), |content| {
+            let deserialize_value = key_with_parser.parser().deserialize_value(content)?;
+            Ok(deserialize_value)
         })
     }
 
     #[inline]
     async fn list_objects_copy(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        self.list_objects_inner(prefix)
+        Ok(self.list_objects_inner(prefix))
     }
 }
 

@@ -29,51 +29,48 @@ where
         }
     }
 
-    fn exists_inner(&self, key: &str) -> Result<bool, LruError> {
-        Ok(self.exists.contains(key))
+    fn exists_inner(&self, key: &str) -> bool {
+        self.exists.contains(key)
     }
 
-    fn put_bytes_inner(&mut self, key: String, value: Vec<u8>) -> Result<(), LruError> {
+    fn put_bytes_inner(&mut self, key: String, value: Vec<u8>) {
         self.cache.put(key.clone(), value);
         self.exists.insert(key);
-        Ok(())
     }
 
-    fn get_bytes_inner(&mut self, key: &str) -> Result<Option<Vec<u8>>, LruError> {
+    fn get_bytes_inner(&mut self, key: &str) -> Option<Vec<u8>> {
         // TODO: Get from sink
-        let bytes = self.cache.get(key).cloned();
-        Ok(bytes)
+        self.cache.get(key).cloned()
     }
 
-    fn list_objects_inner(&mut self, prefix: &str) -> Result<ListKeyObjects, LruError> {
-        Ok(self
-            .cache
+    fn list_objects_inner(&self, prefix: &str) -> ListKeyObjects {
+        self.cache
             .iter()
             .filter(|&(key, _)| key.starts_with(prefix))
             .filter_map(|(key, _)| radix_key(prefix, key))
-            .collect())
+            .collect()
     }
 
-    async fn get_object_cache_inner<RETURN, PARSER>(
+    fn get_object_cache_inner<RETURN, PARSER>(
         &mut self,
-        key: String,
-        f: PARSER,
+        key: &str,
+        parser: PARSER,
     ) -> Result<Option<RETURN>, LruError>
     where
         RETURN: DeserializeOwned + Send + Sync + Serialize,
         PARSER: Fn(&[u8]) -> Result<RETURN, LruError>,
     {
-        let exists = self.exists_inner(&key)?;
+        let exists = self.exists_inner(key);
 
         if exists {
-            let value = self.cache.get(&key).map(|value| f(value)).transpose()?;
+            let value = self.cache.get(key).map(|value| parser(value)).transpose()?;
             Ok(value)
         } else {
             Ok(None)
         }
     }
 
-    async fn put_object_inner<VALUE, PARSER>(
+    fn put_object_inner<VALUE, PARSER>(
         &mut self,
         key: String,
         value: &VALUE,
@@ -83,7 +80,7 @@ where
         PARSER: Fn(&VALUE) -> Result<Vec<u8>, LruError>,
     {
         let serialize = parser(value)?;
-        self.put_bytes_inner(key, serialize.clone())?;
+        self.put_bytes_inner(key, serialize.clone());
         Ok(serialize)
     }
 }
@@ -104,7 +101,7 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        self.exists_inner(&key_with_parser.key().name())
+        Ok(self.exists_inner(&key_with_parser.key().name()))
     }
 
     #[inline]
@@ -118,11 +115,12 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let serialize = self
-            .put_object_inner(key_with_parser.key().name(), value, |value| {
-                Ok(key_with_parser.parser().serialize_value(value)?)
-            })
-            .await?;
+        let serialize =
+            self.put_object_inner(key_with_parser.key().name(), value, |value_to_serialize| {
+                Ok(key_with_parser
+                    .parser()
+                    .serialize_value(value_to_serialize)?)
+            })?;
 
         self.storage
             .put_bytes_copy(
@@ -145,7 +143,7 @@ where
     where
         DKEY: DKeyWhere,
     {
-        self.put_bytes_inner(key.name(), value.clone())?;
+        self.put_bytes_inner(key.name(), value.clone());
         self.storage.put_bytes_copy(key, mime, value).await?;
         Ok(self)
     }
@@ -160,29 +158,26 @@ where
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let from_cache = self
-            .get_object_cache_inner(key_with_parser.key().name(), |value| {
-                Ok(key_with_parser.parser().deserialize_value(value)?)
-            })
-            .await?;
+        let from_cache = self.get_object_cache_inner(&key_with_parser.key().name(), |value| {
+            Ok(key_with_parser.parser().deserialize_value(value)?)
+        })?;
 
-        match from_cache {
-            Some(c) => Ok(Some(c)),
-            None => {
-                let get_object_copy = self.storage.get_object_copy(key_with_parser).await?;
+        if let Some(value_from_cache) = from_cache {
+            Ok(Some(value_from_cache))
+        } else {
+            let get_object_copy = self.storage.get_object_copy(key_with_parser).await?;
 
-                if let Some(ref value) = get_object_copy {
-                    self.put_object_copy(key_with_parser, value).await?;
-                }
-
-                Ok(get_object_copy)
+            if let Some(ref value) = get_object_copy {
+                self.put_object_copy(key_with_parser, value).await?;
             }
+
+            Ok(get_object_copy)
         }
     }
 
     #[inline]
     async fn list_objects_copy(&mut self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        self.list_objects_inner(prefix)
+        Ok(self.list_objects_inner(prefix))
     }
 
     #[inline]
@@ -190,6 +185,6 @@ where
     where
         DKEY: DKeyWhere,
     {
-        self.get_bytes_inner(key.name().as_str())
+        Ok(self.get_bytes_inner(key.name().as_str()))
     }
 }
