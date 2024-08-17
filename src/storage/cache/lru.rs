@@ -54,7 +54,7 @@ where
             .collect())
     }
 
-    fn get_object_inner<RETURN, PARSER>(
+    async fn get_object_cache_inner<RETURN, PARSER>(
         &mut self,
         key: String,
         f: PARSER,
@@ -69,10 +69,7 @@ where
             let value = self.cache.get(&key).map(|value| f(value)).transpose()?;
             Ok(value)
         } else {
-            // let object = self.storage.get_object_copy(key_with_parser).await?;
-            // self.put_object(key_with_parser, &object).await?;
-            // Ok(object)
-            todo!()
+            Ok(None)
         }
     }
 
@@ -126,6 +123,7 @@ where
                 Ok(key_with_parser.parser().serialize_value(value)?)
             })
             .await?;
+
         self.storage
             .put_bytes_copy(
                 key_with_parser.key(),
@@ -133,6 +131,7 @@ where
                 serialize,
             )
             .await?;
+
         Ok(self)
     }
 
@@ -157,23 +156,27 @@ where
         key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
-        RETURN: DeserializeOwned + Send + Sync + Serialize,
+        RETURN: Serialize + DeserializeOwned + Send + Sync,
         DKEY: DKeyWhere,
         PARSER: ParserWhere,
     {
-        let exists = self.exists(key_with_parser).await?;
+        let from_cache = self
+            .get_object_cache_inner(key_with_parser.key().name(), |value| {
+                Ok(key_with_parser.parser().deserialize_value(value)?)
+            })
+            .await?;
 
-        if exists {
-            let value = self
-                .cache
-                .get(&key_with_parser.key().name())
-                .map(|value| key_with_parser.parser().deserialize_value(value))
-                .transpose()?;
-            Ok(value)
-        } else {
-            let object = self.storage.get_object_copy(key_with_parser).await?;
-            self.put_object(key_with_parser, &object).await?;
-            Ok(object)
+        match from_cache {
+            Some(c) => Ok(Some(c)),
+            None => {
+                let get_object_copy = self.storage.get_object_copy(key_with_parser).await?;
+
+                if let Some(ref value) = get_object_copy {
+                    self.put_object(key_with_parser, value).await?;
+                }
+
+                Ok(get_object_copy)
+            }
         }
     }
 

@@ -143,7 +143,7 @@ pub trait CacheCopy {
         key_with_parser: &DKeyWithParser<DKEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
-        RETURN: DeserializeOwned + Send + Sync + Serialize,
+        RETURN: Serialize + DeserializeOwned + Send + Sync,
         DKEY: DKeyWhere,
         PARSER: ParserWhere;
 
