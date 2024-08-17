@@ -4,7 +4,7 @@ use lru::LruCache;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::storage::direct::DKeyWithParser;
+use crate::storage::direct::DKeyWithParserCopy;
 use crate::storage::{
     radix_key, CacheCopy, DKeyWhere, ListKeyObjects, LruError, ParserWhere, SinkCopy, ValueWhere,
 };
@@ -98,7 +98,7 @@ where
     #[inline]
     async fn exists_copy<DKEY, PARSER>(
         &self,
-        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
         DKEY: DKeyWhere,
@@ -110,7 +110,7 @@ where
     #[inline]
     async fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
         value: &VALUE,
     ) -> Result<&Self, Self::Error>
     where
@@ -153,7 +153,7 @@ where
     #[inline]
     async fn get_object_copy<RETURN, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: Serialize + DeserializeOwned + Send + Sync,

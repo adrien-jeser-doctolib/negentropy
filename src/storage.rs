@@ -7,15 +7,15 @@ use core::error::Error;
 use core::fmt;
 use core::future::Future;
 
-use direct::{DKey, DKeyWithParser};
-use parser::Parser;
+use direct::{DKey, DKeyWithParserCopy};
+use parser::ParserCopy;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::HashSet;
 
 pub trait DKeyWhere = DKey + Send + Sync;
-pub trait ParserWhere = Parser + Send + Sync;
+pub trait ParserWhere = ParserCopy + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
 pub type ListKeyObjects = HashSet<String>;
 
@@ -24,7 +24,7 @@ pub trait SinkCopy {
 
     fn exists_copy<DKEY, PARSER>(
         &self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
         DKEY: DKeyWhere,
@@ -33,7 +33,7 @@ pub trait SinkCopy {
     #[inline]
     fn put_object_if_not_exists_copy<DKEY, PARSER, VALUE>(
         &mut self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
@@ -54,7 +54,7 @@ pub trait SinkCopy {
 
     fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send
     where
@@ -73,7 +73,7 @@ pub trait SinkCopy {
 
     fn get_object_copy<RETURN, DKEY, PARSER>(
         &self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
         RETURN: DeserializeOwned + Send + Sync,
@@ -91,7 +91,7 @@ pub trait CacheCopy {
 
     fn exists_copy<DKEY, PARSER>(
         &self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
         DKEY: DKeyWhere,
@@ -100,7 +100,7 @@ pub trait CacheCopy {
     #[inline]
     fn put_object_if_not_exists_copy<DKEY, PARSER, VALUE>(
         &mut self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send
     where
@@ -121,7 +121,7 @@ pub trait CacheCopy {
 
     fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
         value: &VALUE,
     ) -> impl Future<Output = Result<&Self, Self::Error>> + Send
     where
@@ -140,7 +140,7 @@ pub trait CacheCopy {
 
     fn get_object_copy<RETURN, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &DKeyWithParser<DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<DKEY, PARSER>,
     ) -> impl Future<Output = Result<Option<RETURN>, Self::Error>> + Send
     where
         RETURN: Serialize + DeserializeOwned + Send + Sync,

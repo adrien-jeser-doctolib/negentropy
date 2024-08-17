@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::ParserError;
 use crate::storage::ValueWhere;
 
-pub trait Parser {
+pub trait ParserCopy {
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
     where
         VALUE: ValueWhere;
@@ -18,7 +18,7 @@ pub trait Parser {
 #[derive(Default)]
 pub struct Json;
 
-impl Parser for Json {
+impl ParserCopy for Json {
     #[inline]
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
     where

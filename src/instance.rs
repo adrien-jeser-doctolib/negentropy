@@ -7,7 +7,7 @@ use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::storage::direct::{DKey, DKeyWithParser};
+use crate::storage::direct::{DKey, DKeyWithParserCopy};
 use crate::storage::parser::Json;
 use crate::storage::{CacheCopy, ValueWhere};
 use crate::InstanceKey;
@@ -119,7 +119,7 @@ where
 
     async fn welcome(mut self) -> Result<Self, CACHE::Error> {
         let welcome = Welcome::default();
-        let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
+        let key_with_parser = DKeyWithParserCopy::new(&InstanceKey::Welcome, &Json);
         self.storage
             .put_object_if_not_exists_copy(&key_with_parser, &welcome)
             .await?;
@@ -134,7 +134,7 @@ where
                 .unwrap_or_default()
                 .to_string(),
         );
-        let key_with_parser = DKeyWithParser::new(key, &Json);
+        let key_with_parser = DKeyWithParserCopy::new(key, &Json);
         self.storage
             .put_object_if_not_exists_copy(&key_with_parser, &initialize)
             .await?;
@@ -153,7 +153,7 @@ where
         <CACHE as CacheCopy>::Error: Debug,
     {
         self.storage
-            .put_object_if_not_exists_copy(&DKeyWithParser::new(key, &Json), value)
+            .put_object_if_not_exists_copy(&DKeyWithParserCopy::new(key, &Json), value)
             .await?;
 
         Ok(self)
@@ -179,7 +179,7 @@ mod tests {
         let lru = Lru::new(NonZeroUsize::new(10).unwrap(), memory);
         let builder = Configuration::default();
         let mut instance = Instance::new(lru, builder).await.unwrap();
-        let key_with_parser = DKeyWithParser::new(&InstanceKey::Welcome, &Json);
+        let key_with_parser = DKeyWithParserCopy::new(&InstanceKey::Welcome, &Json);
         instance
             .storage
             .get_object_copy::<Welcome, _, _>(&key_with_parser)

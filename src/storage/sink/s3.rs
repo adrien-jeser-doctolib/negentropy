@@ -10,7 +10,7 @@ use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 use serde::de::DeserializeOwned;
 
-use crate::storage::direct::DKeyWithParser;
+use crate::storage::direct::DKeyWithParserCopy;
 use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, SinkCopy, ValueWhere};
 
 #[derive(Debug, Clone)]
@@ -156,7 +156,7 @@ impl SinkCopy for S3 {
     #[inline]
     async fn exists_copy<DKEY, PARSER>(
         &self,
-        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
     ) -> Result<bool, Self::Error>
     where
         DKEY: DKeyWhere,
@@ -168,7 +168,7 @@ impl SinkCopy for S3 {
     #[inline]
     async fn put_object_copy<VALUE, DKEY, PARSER>(
         &mut self,
-        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
         value: &VALUE,
     ) -> Result<(), Self::Error>
     where
@@ -201,7 +201,7 @@ impl SinkCopy for S3 {
     #[inline]
     async fn get_object_copy<RETURN, DKEY, PARSER>(
         &self,
-        key_with_parser: &DKeyWithParser<'_, DKEY, PARSER>,
+        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
     ) -> Result<Option<RETURN>, Self::Error>
     where
         RETURN: DeserializeOwned + Send + Sync,
