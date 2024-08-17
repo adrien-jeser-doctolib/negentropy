@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::storage::direct::{DKey, DKeyWithParserCopy};
-use crate::storage::parser::Json;
+use crate::storage::parser_copy::Json;
 use crate::storage::{CacheCopy, ValueWhere};
 use crate::InstanceKey;
 

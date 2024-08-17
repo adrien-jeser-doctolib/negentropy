@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod direct;
-pub mod parser;
+pub mod parser_copy;
+pub mod parser_zerocopy;
 pub mod sink;
 
 use core::error::Error;
@@ -8,7 +9,7 @@ use core::fmt;
 use core::future::Future;
 
 use direct::{DKey, DKeyWithParserCopy};
-use parser::ParserCopy;
+use parser_copy::ParserCopy;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

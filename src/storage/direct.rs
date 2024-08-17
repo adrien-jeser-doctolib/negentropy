@@ -1,4 +1,4 @@
-use super::parser::ParserCopy;
+use super::parser_copy::ParserCopy;
 
 pub trait DKey {
     fn name(&self) -> String;
