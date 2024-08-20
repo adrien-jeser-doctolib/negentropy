@@ -1,14 +1,10 @@
-use rkyv::{
-    ser::{
-        serializers::{
-            AlignedSerializer, AllocScratch, AllocSerializer, CompositeSerializer, FallbackScratch,
-            HeapScratch, SharedSerializeMap,
-        },
-        Serializer,
-    },
-    validation::validators::DefaultValidator,
-    AlignedVec, Archive, CheckBytes, Deserialize, Infallible,
+use rkyv::ser::serializers::{
+    AlignedSerializer, AllocScratch, AllocSerializer, CompositeSerializer, FallbackScratch,
+    HeapScratch, SharedSerializeMap,
 };
+use rkyv::ser::Serializer;
+use rkyv::validation::validators::DefaultValidator;
+use rkyv::{AlignedVec, Archive, CheckBytes, Deserialize, Infallible};
 
 use super::ParserError;
 use crate::storage::ValueWhere;
@@ -68,6 +64,6 @@ impl ParserZeroCopy for Rkyv {
     }
 
     fn mime(&self) -> String {
-        todo!()
+        "application/rkyv".to_owned()
     }
 }
