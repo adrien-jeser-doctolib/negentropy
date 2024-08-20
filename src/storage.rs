@@ -1,4 +1,5 @@
 pub mod cache;
+pub mod copy;
 pub mod direct;
 pub mod parser_copy;
 pub mod parser_zerocopy;
