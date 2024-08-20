@@ -168,7 +168,7 @@ impl SinkCopy for Memory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DKey;
+    use crate::{DKey, HashSet};
 
     enum TestKey {
         One,
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(memory.len(), 0);
         assert_eq!(
             memory.list_objects_copy("").await.unwrap(),
-            vec![].into_iter().collect()
+            vec![].into_iter().collect::<HashSet<_>>()
         );
 
         memory
@@ -234,7 +234,7 @@ mod tests {
 
         assert_eq!(
             memory.list_objects_copy("").await.unwrap(),
-            vec!["one".to_owned()].into_iter().collect(),
+            vec!["one".to_owned()].into_iter().collect::<HashSet<_>>(),
             "must have only `one`"
         );
 
@@ -247,7 +247,7 @@ mod tests {
             memory.list_objects_copy("").await.unwrap(),
             vec!["one".to_owned(), "long/".to_owned()]
                 .into_iter()
-                .collect(),
+                .collect::<HashSet<_>>(),
             "`long/qux` must be split to `long/`"
         );
 
@@ -264,7 +264,7 @@ mod tests {
             memory.list_objects_copy("").await.unwrap(),
             vec!["one".to_owned(), "long/".to_owned()]
                 .into_iter()
-                .collect()
+                .collect::<HashSet<_>>()
         );
     }
 
@@ -274,7 +274,7 @@ mod tests {
         assert_eq!(memory.len(), 0);
         assert_eq!(
             memory.list_objects_copy("long").await.unwrap(),
-            vec![].into_iter().collect()
+            vec![].into_iter().collect::<HashSet<_>>()
         );
 
         memory
@@ -284,12 +284,12 @@ mod tests {
 
         assert_eq!(
             memory.list_objects_copy("long").await.unwrap(),
-            vec![].into_iter().collect()
+            vec![].into_iter().collect::<HashSet<_>>()
         );
 
         assert_eq!(
             memory.list_objects_copy("long/").await.unwrap(),
-            vec![].into_iter().collect()
+            vec![].into_iter().collect::<HashSet<_>>()
         );
 
         memory
@@ -299,11 +299,13 @@ mod tests {
 
         assert_eq!(
             memory.list_objects_copy("long").await.unwrap(),
-            vec![].into_iter().collect()
+            vec![].into_iter().collect::<HashSet<_>>()
         );
         assert_eq!(
             memory.list_objects_copy("long/").await.unwrap(),
-            vec!["long/qux".to_owned()].into_iter().collect()
+            vec!["long/qux".to_owned()]
+                .into_iter()
+                .collect::<HashSet<_>>()
         );
 
         memory
@@ -323,12 +325,14 @@ mod tests {
                 "long/verylong/".to_owned()
             ]
             .into_iter()
-            .collect()
+            .collect::<HashSet<_>>()
         );
 
         assert_eq!(
             memory.list_objects_copy("long/verylong/").await.unwrap(),
-            vec!["long/verylong/buz".to_owned()].into_iter().collect()
+            vec!["long/verylong/buz".to_owned()]
+                .into_iter()
+                .collect::<HashSet<_>>()
         );
     }
 }
