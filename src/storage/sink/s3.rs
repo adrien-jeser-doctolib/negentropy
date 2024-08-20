@@ -8,10 +8,8 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
-use serde::de::DeserializeOwned;
 
-use crate::storage::direct::DKeyWithParserCopy;
-use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, SinkCopy, ValueWhere};
+use crate::storage::{ListKeyObjects, S3Error};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -28,7 +26,7 @@ impl S3 {
         })
     }
 
-    async fn exists_inner(&self, key: String) -> Result<bool, S3Error> {
+    pub(crate) async fn exists_inner(&self, key: String) -> Result<bool, S3Error> {
         let head_object = self
             .inner
             .head_object()
@@ -52,7 +50,7 @@ impl S3 {
         }
     }
 
-    async fn put_bytes_inner(
+    pub(crate) async fn put_bytes_inner(
         &self,
         key: String,
         mime: String,
@@ -75,7 +73,7 @@ impl S3 {
         Ok(())
     }
 
-    async fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, S3Error> {
+    pub(crate) async fn list_objects_inner(&self, prefix: &str) -> Result<ListKeyObjects, S3Error> {
         let list = self
             .inner
             .list_objects_v2()
@@ -95,7 +93,7 @@ impl S3 {
         }
     }
 
-    async fn put_object_inner<VALUE, PARSER>(
+    pub(crate) async fn put_object_inner<VALUE, PARSER>(
         &self,
         key: String,
         mime: String,
@@ -118,7 +116,7 @@ impl S3 {
         }
     }
 
-    async fn get_object_inner<RETURN, PARSER>(
+    pub(crate) async fn get_object_inner<RETURN, PARSER>(
         &self,
         key: String,
         parser: PARSER,
@@ -148,80 +146,6 @@ impl S3 {
                 internal: err.to_string(),
             }),
         }
-    }
-}
-
-impl SinkCopy for S3 {
-    type Error = S3Error;
-
-    #[inline]
-    async fn exists_copy<DKEY, PARSER>(
-        &self,
-        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
-    ) -> Result<bool, Self::Error>
-    where
-        DKEY: DKeyWhere,
-        PARSER: ParserWhere,
-    {
-        self.exists_inner(key_with_parser.key().name()).await
-    }
-
-    #[inline]
-    async fn put_object_copy<VALUE, DKEY, PARSER>(
-        &mut self,
-        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
-        value: &VALUE,
-    ) -> Result<(), Self::Error>
-    where
-        VALUE: ValueWhere,
-        DKEY: DKeyWhere,
-        PARSER: ParserWhere,
-    {
-        self.put_object_inner(
-            key_with_parser.key().name(),
-            key_with_parser.parser().mime(),
-            value,
-            |value_to_serialize| {
-                Ok(key_with_parser
-                    .parser()
-                    .serialize_value(value_to_serialize)?)
-            },
-        )
-        .await
-    }
-
-    #[inline]
-    async fn put_bytes_copy<DKEY>(
-        &mut self,
-        key: &DKEY,
-        mime: String,
-        value: Vec<u8>,
-    ) -> Result<(), Self::Error>
-    where
-        DKEY: DKeyWhere,
-    {
-        self.put_bytes_inner(key.name(), mime, value).await
-    }
-
-    #[inline]
-    async fn get_object_copy<RETURN, DKEY, PARSER>(
-        &self,
-        key_with_parser: &DKeyWithParserCopy<'_, DKEY, PARSER>,
-    ) -> Result<Option<RETURN>, Self::Error>
-    where
-        RETURN: DeserializeOwned + Send + Sync,
-        DKEY: DKeyWhere,
-        PARSER: ParserWhere,
-    {
-        self.get_object_inner(key_with_parser.key().name(), |content| {
-            Ok(key_with_parser.parser().deserialize_value(content)?)
-        })
-        .await
-    }
-
-    #[inline]
-    async fn list_objects_copy(&self, prefix: &str) -> Result<ListKeyObjects, Self::Error> {
-        self.list_objects_inner(prefix).await
     }
 }
 
