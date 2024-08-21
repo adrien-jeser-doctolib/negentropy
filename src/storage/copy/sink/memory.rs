@@ -1,9 +1,9 @@
 use serde::de::DeserializeOwned;
 
-use crate::storage::copy::SinkCopy;
-use crate::storage::direct::DKeyWithParserCopy;
+use crate::storage::copy::direct::DKeyWithParserCopy;
+use crate::storage::copy::{ParserWhere, SinkCopy, ValueWhere};
 use crate::storage::sink::memory::Memory;
-use crate::storage::{DKeyWhere, ListKeyObjects, MemoryError, ParserWhere, ValueWhere};
+use crate::storage::{DKeyWhere, ListKeyObjects, MemoryError};
 
 impl SinkCopy for Memory {
     type Error = MemoryError;

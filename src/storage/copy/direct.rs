@@ -1,8 +1,5 @@
 use super::parser_copy::ParserCopy;
-
-pub trait DKey {
-    fn name(&self) -> String;
-}
+use crate::storage::DKey;
 
 pub struct DKeyWithParserCopy<'content, DKEY, PARSER>
 where

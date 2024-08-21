@@ -1,23 +1,20 @@
 pub mod cache;
+#[cfg(feature = "copy")]
 pub mod copy;
-pub mod direct;
-pub mod parser_copy;
 pub mod parser_zerocopy;
 pub mod sink;
 
 use core::error::Error;
 use core::fmt;
 
-use direct::DKey;
-use parser_copy::ParserCopy;
-use serde::Serialize;
-
 use crate::HashSet;
 
 pub trait DKeyWhere = DKey + Send + Sync;
-pub trait ParserWhere = ParserCopy + Send + Sync;
-pub trait ValueWhere = Serialize + Send + Sync;
 pub type ListKeyObjects = HashSet<String>;
+
+pub trait DKey {
+    fn name(&self) -> String;
+}
 
 #[derive(Debug)]
 pub enum S3Error {

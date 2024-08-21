@@ -2,9 +2,9 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::storage::cache::lru::Lru;
-use crate::storage::copy::{CacheCopy, SinkCopy};
-use crate::storage::direct::DKeyWithParserCopy;
-use crate::storage::{DKeyWhere, ListKeyObjects, LruError, ParserWhere, ValueWhere};
+use crate::storage::copy::direct::DKeyWithParserCopy;
+use crate::storage::copy::{CacheCopy, ParserWhere, SinkCopy, ValueWhere};
+use crate::storage::{DKeyWhere, ListKeyObjects, LruError};
 
 impl<STORAGE> CacheCopy for Lru<STORAGE>
 where

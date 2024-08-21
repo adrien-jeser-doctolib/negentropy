@@ -21,10 +21,6 @@
 )]
 #![expect(clippy::exhaustive_structs, reason = "Accept breaking struct")]
 
-use serde::Serialize;
-use storage::direct::DKey;
-
-pub mod instance;
 pub mod storage;
 
 #[cfg(not(feature = "prod"))]
@@ -32,8 +28,9 @@ pub use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "prod")]
 pub use gxhash::{HashMap, HashSet};
+use storage::DKey;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub enum InstanceKey {
     Welcome,
     Initialize(String),

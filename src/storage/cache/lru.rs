@@ -1,8 +1,6 @@
 use core::num::NonZeroUsize;
 
 use lru::LruCache;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 
 use crate::storage::{radix_key, ListKeyObjects, LruError};
 use crate::HashSet;
@@ -54,7 +52,7 @@ where
         parser: PARSER,
     ) -> Result<Option<RETURN>, LruError>
     where
-        RETURN: DeserializeOwned + Send + Sync + Serialize,
+        RETURN: Send + Sync,
         PARSER: Fn(&[u8]) -> Result<RETURN, LruError>,
     {
         let exists = self.exists_inner(key);

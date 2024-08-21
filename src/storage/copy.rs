@@ -1,12 +1,19 @@
+use direct::DKeyWithParserCopy;
 use futures::Future;
+use parser_copy::ParserCopy;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use super::direct::DKeyWithParserCopy;
-use super::{DKeyWhere, ListKeyObjects, ParserWhere, ValueWhere};
+use super::{DKeyWhere, ListKeyObjects};
 
 pub mod cache;
+pub mod direct;
+pub mod instance;
+pub mod parser_copy;
 pub mod sink;
+
+pub trait ParserWhere = ParserCopy + Send + Sync;
+pub trait ValueWhere = Serialize + Send + Sync;
 
 pub trait SinkCopy {
     type Error;

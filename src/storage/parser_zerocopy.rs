@@ -7,7 +7,6 @@ use rkyv::validation::validators::DefaultValidator;
 use rkyv::{AlignedVec, Archive, CheckBytes, Deserialize, Infallible};
 
 use super::ParserError;
-use crate::storage::ValueWhere;
 
 pub trait SerializeZeroCopy = rkyv::Serialize<
     CompositeSerializer<
@@ -20,7 +19,7 @@ pub trait SerializeZeroCopy = rkyv::Serialize<
 pub trait ParserZeroCopy {
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
     where
-        VALUE: ValueWhere + SerializeZeroCopy;
+        VALUE: SerializeZeroCopy;
 
     fn deserialize_value<'content, CONTENT>(
         &'content self,
@@ -39,7 +38,7 @@ pub struct Rkyv;
 impl ParserZeroCopy for Rkyv {
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
     where
-        VALUE: ValueWhere + SerializeZeroCopy,
+        VALUE: SerializeZeroCopy,
     {
         let mut serializer = AllocSerializer::<0>::default();
         serializer.serialize_value(value).unwrap();

@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use super::ParserError;
-use crate::storage::ValueWhere;
+use super::ValueWhere;
+use crate::storage::ParserError;
 
 pub trait ParserCopy {
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
@@ -22,7 +22,7 @@ impl ParserCopy for Json {
     #[inline]
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
     where
-        VALUE: Serialize + Send,
+        VALUE: ValueWhere,
     {
         serde_json::to_vec(value).map_err(|err| ParserError::Serde {
             internal: err.to_string(),

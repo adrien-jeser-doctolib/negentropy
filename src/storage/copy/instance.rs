@@ -1,4 +1,4 @@
-use core::fmt::Debug;
+use std::fmt::Debug;
 use std::path::Path;
 use std::{env, fs};
 
@@ -7,10 +7,10 @@ use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::storage::copy::CacheCopy;
-use crate::storage::direct::{DKey, DKeyWithParserCopy};
-use crate::storage::parser_copy::Json;
-use crate::storage::ValueWhere;
+use super::direct::DKeyWithParserCopy;
+use super::parser_copy::Json;
+use super::{CacheCopy, ValueWhere};
+use crate::storage::DKey;
 use crate::InstanceKey;
 
 #[derive(Serialize, Deserialize)]
@@ -97,7 +97,6 @@ impl Configuration {
         }
     }
 }
-
 pub struct Instance<CACHE: CacheCopy + Send + Sync> {
     storage: CACHE,
     configuration: Configuration,

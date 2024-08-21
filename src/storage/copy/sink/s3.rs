@@ -1,9 +1,9 @@
 use serde::de::DeserializeOwned;
 
-use crate::storage::copy::SinkCopy;
-use crate::storage::direct::DKeyWithParserCopy;
+use crate::storage::copy::direct::DKeyWithParserCopy;
+use crate::storage::copy::{ParserWhere, SinkCopy, ValueWhere};
 use crate::storage::sink::s3::S3;
-use crate::storage::{DKeyWhere, ListKeyObjects, ParserWhere, S3Error, ValueWhere};
+use crate::storage::{DKeyWhere, ListKeyObjects, S3Error};
 
 impl SinkCopy for S3 {
     type Error = S3Error;
