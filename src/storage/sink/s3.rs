@@ -9,7 +9,9 @@ use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
 use aws_sdk_s3::primitives::{AggregatedBytes, ByteStream};
 use aws_sdk_s3::Client;
 
-use crate::storage::{ListKeyObjects, S3Error};
+use crate::storage::{
+    DeserializeWhere, ListKeyObjects, ReturnWhere, S3Error, SerializeWhere, ValueWhere,
+};
 
 #[derive(Debug, Clone)]
 pub struct S3 {
@@ -101,8 +103,8 @@ impl S3 {
         parser: PARSER,
     ) -> Result<(), S3Error>
     where
-        VALUE: Send + Sync,
-        PARSER: Send + Sync + Fn(&VALUE) -> Result<Vec<u8>, S3Error>,
+        VALUE: ValueWhere,
+        PARSER: SerializeWhere<VALUE, S3Error>,
     {
         let serialize = parser(value);
 
@@ -122,8 +124,8 @@ impl S3 {
         parser: PARSER,
     ) -> Result<Option<RETURN>, S3Error>
     where
-        RETURN: Send + Sync,
-        PARSER: Send + Sync + Fn(&[u8]) -> Result<RETURN, S3Error>,
+        RETURN: ReturnWhere,
+        PARSER: DeserializeWhere<RETURN, S3Error>,
     {
         let object = self
             .inner
@@ -167,8 +169,8 @@ async fn parse_s3_object<RETURN, PARSER>(
     parser: PARSER,
 ) -> Result<Option<RETURN>, S3Error>
 where
-    RETURN: Send + Sync,
-    PARSER: Send + Sync + Fn(&[u8]) -> Result<RETURN, S3Error>,
+    RETURN: ReturnWhere,
+    PARSER: DeserializeWhere<RETURN, S3Error>,
 {
     if object.content_length().unwrap_or_default() == 0 {
         Ok(None)
@@ -192,8 +194,8 @@ fn parse_aggregated_bytes<RETURN, PARSER>(
     parser: PARSER,
 ) -> Result<RETURN, S3Error>
 where
-    RETURN: Send + Sync,
-    PARSER: Fn(&[u8]) -> Result<RETURN, S3Error>,
+    RETURN: ReturnWhere,
+    PARSER: DeserializeWhere<RETURN, S3Error>,
 {
     let object = parser(&content.to_vec())?;
     Ok(object)

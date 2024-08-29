@@ -2,7 +2,7 @@ use core::num::NonZeroUsize;
 
 use lru::LruCache;
 
-use crate::storage::{radix_key, ListKeyObjects, LruError};
+use crate::storage::{radix_key, DeserializeWhere, ListKeyObjects, LruError, ReturnWhere};
 use crate::HashSet;
 
 pub struct Lru<STORAGE> {
@@ -52,8 +52,8 @@ where
         parser: PARSER,
     ) -> Result<Option<RETURN>, LruError>
     where
-        RETURN: Send + Sync,
-        PARSER: Fn(&[u8]) -> Result<RETURN, LruError>,
+        RETURN: ReturnWhere,
+        PARSER: DeserializeWhere<RETURN, LruError>,
     {
         let exists = self.exists_inner(key);
 

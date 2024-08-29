@@ -10,6 +10,10 @@ use core::fmt;
 use crate::HashSet;
 
 pub trait DKeyWhere = DKey + Send + Sync;
+pub trait ReturnWhere = Send + Sync;
+pub trait ValueWhere = Send + Sync;
+pub trait SerializeWhere<VALUE, ERROR> = Send + Sync + Fn(&VALUE) -> Result<Vec<u8>, ERROR>;
+pub trait DeserializeWhere<RETURN, ERROR> = Send + Sync + Fn(&[u8]) -> Result<RETURN, ERROR>;
 pub type ListKeyObjects = HashSet<String>;
 
 pub trait DKey {
