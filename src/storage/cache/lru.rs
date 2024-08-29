@@ -8,7 +8,7 @@ use crate::HashSet;
 pub struct Lru<STORAGE> {
     exists: HashSet<String>,
     cache: LruCache<String, Vec<u8>>,
-    pub(crate) storage: STORAGE,
+    storage: STORAGE,
 }
 
 impl<STORAGE> Lru<STORAGE>
@@ -22,6 +22,10 @@ where
             cache: LruCache::new(size),
             storage,
         }
+    }
+
+    pub(crate) fn storage(&mut self) -> &mut STORAGE {
+        &mut self.storage
     }
 
     pub(crate) fn exists_inner(&self, key: &str) -> bool {

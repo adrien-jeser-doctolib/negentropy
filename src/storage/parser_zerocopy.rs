@@ -36,16 +36,22 @@ pub trait ParserZeroCopy {
 pub struct Rkyv;
 
 impl ParserZeroCopy for Rkyv {
+    #[inline]
     fn serialize_value<VALUE>(&self, value: &VALUE) -> Result<Vec<u8>, ParserError>
     where
         VALUE: SerializeZeroCopy,
     {
         let mut serializer = AllocSerializer::<0>::default();
-        serializer.serialize_value(value).unwrap();
+        serializer
+            .serialize_value(value)
+            .map_err(|err| ParserError::Serde {
+                internal: err.to_string(),
+            })?;
         let bytes = serializer.into_serializer().into_inner();
         Ok(bytes.to_vec())
     }
 
+    #[inline]
     fn deserialize_value<'content, CONTENT>(
         &'content self,
         content: &'content [u8],
@@ -54,14 +60,15 @@ impl ParserZeroCopy for Rkyv {
         CONTENT: Deserialize<CONTENT, Infallible> + Archive<Archived = CONTENT>,
         <CONTENT as Archive>::Archived: CheckBytes<DefaultValidator<'content>>,
     {
-        let content =
+        let content_deserialized =
             rkyv::check_archived_root::<CONTENT>(content).map_err(|err| ParserError::Serde {
                 internal: err.to_string(),
             })?;
 
-        Ok(content)
+        Ok(content_deserialized)
     }
 
+    #[inline]
     fn mime(&self) -> String {
         "application/rkyv".to_owned()
     }

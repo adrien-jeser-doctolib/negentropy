@@ -43,7 +43,7 @@ where
                     .serialize_value(value_to_serialize)?)
             })?;
 
-        self.storage
+        self.storage()
             .put_bytes_copy(
                 key_with_parser.key(),
                 key_with_parser.parser().mime(),
@@ -65,7 +65,7 @@ where
         DKEY: DKeyWhere,
     {
         self.put_bytes_inner(key.name(), value.clone());
-        self.storage.put_bytes_copy(key, mime, value).await?;
+        self.storage().put_bytes_copy(key, mime, value).await?;
         Ok(self)
     }
 
@@ -86,7 +86,7 @@ where
         if let Some(value_from_cache) = from_cache {
             Ok(Some(value_from_cache))
         } else {
-            let get_object_copy = self.storage.get_object_copy(key_with_parser).await?;
+            let get_object_copy = self.storage().get_object_copy(key_with_parser).await?;
 
             if let Some(ref value) = get_object_copy {
                 self.put_object_copy(key_with_parser, value).await?;
