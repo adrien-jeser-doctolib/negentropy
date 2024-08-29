@@ -1,10 +1,10 @@
-use super::parser_copy::ParserCopy;
+use super::parser::Parser;
 use crate::storage::DKey;
 
 pub struct DKeyWithParserCopy<'content, DKEY, PARSER>
 where
     DKEY: DKey,
-    PARSER: ParserCopy,
+    PARSER: Parser,
 {
     key: &'content DKEY,
     parser: &'content PARSER,
@@ -13,7 +13,7 @@ where
 impl<'content, DKEY, PARSER> DKeyWithParserCopy<'content, DKEY, PARSER>
 where
     DKEY: DKey,
-    PARSER: ParserCopy,
+    PARSER: Parser,
 {
     #[inline]
     pub const fn new(key: &'content DKEY, parser: &'content PARSER) -> Self {
