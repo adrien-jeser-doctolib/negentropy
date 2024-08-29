@@ -24,6 +24,6 @@ uuid = { version = "1.10.0", features = [
 ] }
 
 [features]
-default = ["copy"]
+default = []
 prod = ["gxhash"]
 copy = ["serde", "serde_json"]
