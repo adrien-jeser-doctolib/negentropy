@@ -15,7 +15,7 @@ pub mod sink;
 pub trait ParserWhere = ParserCopy + Send + Sync;
 pub trait ValueWhere = Serialize + Send + Sync;
 
-pub trait SinkCopy {
+pub trait Sink {
     type Error;
 
     fn exists_copy<DKEY, PARSER>(
@@ -82,7 +82,7 @@ pub trait SinkCopy {
     ) -> impl Future<Output = Result<ListKeyObjects, Self::Error>> + Send;
 }
 
-pub trait CacheCopy {
+pub trait Cache {
     type Error;
 
     fn exists_copy<DKEY, PARSER>(

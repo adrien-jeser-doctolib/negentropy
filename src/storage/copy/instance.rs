@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use super::direct::DKeyWithParserCopy;
 use super::parser_copy::Json;
-use super::{CacheCopy, ValueWhere};
+use super::{Cache, ValueWhere};
 use crate::storage::DKey;
 use crate::InstanceKey;
 
@@ -97,15 +97,15 @@ impl Configuration {
         }
     }
 }
-pub struct Instance<CACHE: CacheCopy + Send + Sync> {
+pub struct Instance<CACHE: Cache + Send + Sync> {
     storage: CACHE,
     configuration: Configuration,
 }
 
 impl<CACHE> Instance<CACHE>
 where
-    CACHE: CacheCopy + Send + Sync,
-    <CACHE as CacheCopy>::Error: Send + Sync,
+    CACHE: Cache + Send + Sync,
+    <CACHE as Cache>::Error: Send + Sync,
 {
     #[inline]
     pub async fn new(storage: CACHE, configuration: Configuration) -> Result<Self, CACHE::Error> {
@@ -150,7 +150,7 @@ where
     where
         DKEY: DKey + Send + Sync,
         VALUE: ValueWhere,
-        <CACHE as CacheCopy>::Error: Debug,
+        <CACHE as Cache>::Error: Debug,
     {
         self.storage
             .put_object_if_not_exists_copy(&DKeyWithParserCopy::new(key, &Json), value)

@@ -3,13 +3,13 @@ use serde::Serialize;
 
 use crate::storage::cache::lru::Lru;
 use crate::storage::copy::direct::DKeyWithParserCopy;
-use crate::storage::copy::{CacheCopy, ParserWhere, SinkCopy, ValueWhere};
+use crate::storage::copy::{Cache, ParserWhere, Sink, ValueWhere};
 use crate::storage::{DKeyWhere, ListKeyObjects, LruError};
 
-impl<STORAGE> CacheCopy for Lru<STORAGE>
+impl<STORAGE> Cache for Lru<STORAGE>
 where
-    STORAGE: SinkCopy + Send + Sync,
-    LruError: From<<STORAGE as SinkCopy>::Error>,
+    STORAGE: Sink + Send + Sync,
+    LruError: From<<STORAGE as Sink>::Error>,
 {
     type Error = LruError;
 
