@@ -1,7 +1,6 @@
 pub mod cache;
 #[cfg(feature = "copy")]
 pub mod copy;
-pub mod parser_zerocopy;
 pub mod sink;
 
 use core::error::Error;
